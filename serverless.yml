@@ -1,0 +1,102 @@
+# Welcome to Serverless!
+#
+# This file is the main config file for your service.
+# It's very minimal at this point and uses default values.
+# You can always add more config options for more control.
+# We've included some commented out config examples here.
+# Just uncomment any of them to get that config option.
+#
+# For full config options, check the docs:
+#    docs.serverless.com
+#
+# Happy Coding!
+
+service: crypto-ixian
+app: crypto-ixian-bot
+
+# You can pin your service to only deploy with a specific Serverless version
+# Check out our docs for more details
+frameworkVersion: '2'
+
+provider:
+  name: aws
+  runtime: python3.9
+  stage: ${opt:stage, env:STAGE, "dev"}
+  region: ca-central-1
+  environment:
+    KUCOIN_URL_ALLTICKERS: https://api.kucoin.com/api/v1/market/allTickers
+    SANTIMENT_KEY: ${env:SANTIMENT_KEY}
+    TABLE_DISCOVERY: ${self:custom.tableDiscovery}
+    QUEUE_HARVEST: ${self:custom.queueHarvest}
+    SNS_TOPIC_DISCOVERY: ${self:custom.snsTopicDiscovery}
+    SES_SENDER: ${self:custom.sesSender}
+    SES_RECIPIENT: ${self:custom.sesRecipient}
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource: "*"
+    - Effect: Allow
+      Action:
+        - sqs:SendMessage
+        - sqs:SendMessageBatch
+        - sqs:DeleteMessage
+        - sqs:DeleteMessageBatch
+        - sqs:GetQueueUrl
+        - sqs:ChangeMessageVisibility
+        - sqs:ChangeMessageVisibilityBatch
+      Resource: "*"
+    - Effect: Allow
+      Action: "sns:*"
+      Resource: "*"
+    - Effect: Allow
+      Action: "ses:*"
+      Resource: "*"
+
+custom:
+  tableDiscovery: discovery-${opt:stage, env:STAGE, "dev"}
+  queueHarvest: harvest-${opt:stage, env:STAGE, "dev"}
+  sesSender: crypto.mastheader@gmail.com
+  sesRecipient: crypto.mastheader@gmail.com
+  snsTopicDiscovery: discovery-${opt:stage, env:STAGE, "dev"}
+  snsTopicHarvest: harvest-${opt:stage, env:STAGE, "dev"}
+  logRetentionInDays: 7
+
+plugins:
+  - serverless-python-requirements
+  - serverless-plugin-log-retention
+
+functions:
+  discovery:
+    handler: cmd/discovery/handler.discovery
+    timeout: 120
+    events:
+      - schedule: cron(0 0 * * ? *)
+  discoveryNotify:
+    handler: cmd/discovery/handler.notify
+    events:
+      - sns: ${self:custom.snsTopicDiscovery}
+resources:
+  Resources:
+    TableDiscovery:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.tableDiscovery}
+        AttributeDefinitions:
+          - AttributeName: slug
+            AttributeType: S
+        KeySchema:
+          - AttributeName: slug
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+    QueueHarvest:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:custom.queueHarvest}
