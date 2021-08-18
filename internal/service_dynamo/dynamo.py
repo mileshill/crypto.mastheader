@@ -1,5 +1,5 @@
 import datetime
-from typing import Dict, Union
+from typing import Dict, Union, List
 
 import boto3
 
@@ -49,4 +49,19 @@ class ServiceDynamo:
         )
         return
 
-
+    def discovery_scan(self, tablename: str) -> List[Dict]:
+        items = list()
+        scan_kwargs = {}
+        done = False
+        start_key = None
+        while not done:
+            if start_key:
+                scan_kwargs["ExclusiveStartKey"] = start_key
+            response = self.client.scan(
+                TableName=tablename,
+                Select="ALL_ATTRIBUTES"
+            )
+            items.extend(response.get("Items", []))
+            start_key = response.get("LastEvaluatedKey", None)
+            done = start_key is None
+        return items

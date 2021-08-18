@@ -76,11 +76,24 @@ functions:
     handler: cmd/discovery/handler.discovery
     timeout: 120
     events:
-      - schedule: cron(0 0 * * ? *)
+      - schedule: cron(0 0 * * ? *) # 00:00 UTC (Midnight) every day
   discoveryNotify:
     handler: cmd/discovery/handler.notify
     events:
       - sns: ${self:custom.snsTopicDiscovery}
+  harvestPrimer:
+    handler: cmd/harvest/primer.primer
+    events:
+      - schedule: cron(1 0 * * ? *) # 01:00 UTC  (Midnight + 1 min) every day
+  harvestExecutor:
+    handler: cmd/harvest/executor.executor
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - QueueHarvest
+              - Arn
+          batchSize: 1
 resources:
   Resources:
     TableDiscovery:
