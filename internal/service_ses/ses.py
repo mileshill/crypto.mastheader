@@ -3,10 +3,9 @@ import botocore.exceptions
 
 
 class Email:
-    def __init__(self, sender, recipient, config_set, subject, message):
+    def __init__(self, sender, recipient, subject, message):
         self.sender = sender
         self.recipient = recipient
-        self.config_set = config_set
         self.subject = subject
         self.message = message
 

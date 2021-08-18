@@ -55,7 +55,9 @@ def santiment_get_projects() -> pd.DataFrame:
 
 def discovery(event, context):
     """
-
+    discovery locates new tokens in the intersection between KuCoin and Santiment.
+    New pairs are uploaded to a DynamoDB table.
+    The results a published to SNS where the `notify` function sends an SES email.
     :param event:
     :param context:
     :return:
@@ -133,6 +135,13 @@ def discovery(event, context):
 
 
 def notify(event, context):
+    """
+    notify parses the SNS record from the discovery completions and sends an email
+    to the SES_RECIPIENT
+    :param event:
+    :param context:
+    :return:
+    """
     vars_required = ["SES_SENDER", "SES_RECIPIENT"]
     vars_loaded = load_env_vars(vars_required)
 
@@ -140,7 +149,6 @@ def notify(event, context):
         email = Email(
             sender=vars_loaded["SES_SENDER"],
             recipient=vars_loaded["SES_RECIPIENT"],
-            config_set="ConfigSet",
             subject=record["Sns"]["Subject"],
             message=record["Sns"]["Message"]
         )
