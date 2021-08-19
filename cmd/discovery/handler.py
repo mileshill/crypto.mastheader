@@ -117,8 +117,8 @@ def discovery(event, context):
     # Publish the data to SNS
     current_utc_time = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
     sns_message = {
-        "subject": f"Mastheader: Discovery Process Complete {current_utc_time}",
-        "message": f"Mastheader Discovery process complete. Discovered {len(new_slugs)} slugs.\n{','.join(new_slugs)}",
+        "Subject": f"Mastheader: Discovery Process Complete {current_utc_time}",
+        "Message": f"Mastheader Discovery process complete. Discovered {len(new_slugs)} slugs.\n{','.join(new_slugs)}",
     }
     message_id = SNS.send_message(vars_loaded["SNS_TOPIC_DISCOVERY"], sns_message)
 

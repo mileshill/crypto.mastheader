@@ -22,11 +22,8 @@ class ServiceSNS:
             topic_arn = response["TopicArn"]
 
         # Publish the message
-        response = self.client.publish(
-            TopicArn=topic_arn,
-            Subject=message["subject"],
-            Message=message["message"],
-        )
+        message["TopicArn"] = topic_arn
+        response = self.client.publish(**message)
         return response["MessageId"]
 
 

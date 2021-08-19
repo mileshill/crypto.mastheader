@@ -4,6 +4,30 @@ from typing import Dict, Union, List
 import boto3
 
 
+class ItemDiscovery:
+    def __init__(self, **kwargs):
+        self.market_segment = kwargs.get("marketSegment", {}).get("S", None)
+        self.ticker = kwargs.get("ticker", {}).get("S", None)
+        self.slug = kwargs.get("slug", {}).get("S", None)
+        self.datetime_last_updated = kwargs.get("datetimeLastUpdate", {}).get("S", "null")
+
+    def to_sqs_format(self, delay_seconds: int = 0):
+        return {
+            "DelaySeconds": delay_seconds,
+            "MessageBody": self.slug,
+            "MessageAttributes": {
+                "datetime_last_updated": {
+                    "StringValue": self.datetime_last_updated,
+                    "DataType": "String"
+                },
+                "ticker": {
+                    "StringValue": self.ticker,
+                    "DataType": "String"
+                }
+            }
+        }
+
+
 class ServiceDynamo:
     def __init__(self):
         self.client = boto3.client("dynamodb")
@@ -49,7 +73,7 @@ class ServiceDynamo:
         )
         return
 
-    def discovery_scan(self, tablename: str) -> List[Dict]:
+    def discovery_scan(self, tablename: str) -> List[ItemDiscovery]:
         items = list()
         scan_kwargs = {}
         done = False
@@ -64,4 +88,5 @@ class ServiceDynamo:
             items.extend(response.get("Items", []))
             start_key = response.get("LastEvaluatedKey", None)
             done = start_key is None
+        items = [ItemDiscovery(**item) for item in items]
         return items
