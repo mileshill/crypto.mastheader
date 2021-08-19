@@ -24,3 +24,8 @@ class ServiceSQS:
         )
         return response["MessageId"]
 
+    def delete_message(self, receipt_handle: str):
+        self.client.delete_message(
+            QueueUrl=self.queue_url,
+            ReceiptHandle=receipt_handle
+        )

@@ -2,6 +2,7 @@ import datetime
 from typing import Dict, Union, List
 
 import boto3
+from boto3.dynamodb.conditions import Key
 
 
 class ItemDiscovery:
@@ -31,6 +32,7 @@ class ItemDiscovery:
 class ServiceDynamo:
     def __init__(self):
         self.client = boto3.client("dynamodb")
+        self.resource = boto3.resource("dynamodb")
 
     def key_exists(self, tablename: str, hash_key_name: str, hash_key_type: str, hash_key_value: str) -> bool:
         """
@@ -90,3 +92,41 @@ class ServiceDynamo:
             done = start_key is None
         items = [ItemDiscovery(**item) for item in items]
         return items
+
+    def harvest_create_item(self, tablename: str, data: Dict[str, Union[str, float]]):
+        """
+        Creates new item in the Discovery table
+        :param tablename:
+        :param data:
+        :return:
+        """
+        resp = self.client.put_item(
+            TableName=tablename,
+            Item={
+                "slug": {"S": data["slug"]},
+                "datetime_metric": {"S": data["datetime"]},
+                "price_usd": {"N": data["price_usd"]},
+                "exchange_outflow_change_1d": {"N": data["exchange_outflow_change_1d"]},
+                "exchange_inflow_change_1d": {"N": data["exchange_inflow_change_1d"]},
+                "age_consumed": {"N": data["age_consumed"]},
+                "active_addresses_24h_change_1d": {"N": data["active_addresses_24h_change_1d"]},
+                "datetimeCreated": {"S": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")},
+            }
+        )
+        return
+
+    def harvest_get_last_update_for_slug(self, tablename: str, slug: str):
+        table = self.resource.Table(tablename)
+        response = table.query(
+            Limit=1,
+            ScanIndexForward=False,
+            KeyConditionExpression=Key("slug").eq(slug)
+        )
+        return response["Items"][0]["datetime_metric"] if len(response["Items"]) else None
+
+    def harvest_get_data_for_slug_within_range(self, tablename: str, slug: str, date_from: str, date_to: str) -> List[Dict]:
+        table = self.resource.Table(tablename)
+        response = table.query(
+            KeyConditionExpression=Key("slug").eq(slug) & Key("datetimeMetric").between(date_from, date_to)
+        )
+        return response["Items"] if len(response["Items"]) else None
