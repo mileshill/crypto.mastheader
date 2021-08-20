@@ -1,5 +1,4 @@
 import datetime
-import uuid
 from typing import Dict, Union, List
 
 import boto3
@@ -169,3 +168,40 @@ class ServiceDynamo:
             }
         )
         return
+
+    def strategy_details_create_item(self, tablename: str, data: Dict[str, Union[str, float]]) -> None:
+        """
+        Creates new item in the Discovery table
+        :param tablename:
+        :param data:
+        :return:
+        """
+        resp = self.client.put_item(
+            TableName=tablename,
+            Item=data
+        )
+        return
+
+    def strategy_meta_get_item(self, tablename: str, slug: str) -> Dict:
+        """
+        Check if the described hash key exists
+        :param slug:
+        :param tablename:
+        :return:
+        """
+        resp = self.client.get_item(
+            TableName=tablename,
+            Key={
+                "slug": {"S": slug}
+            }
+        )
+        return resp["Item"]["guid"]
+
+    def strategy_meta_delete_item(self, tablename: str, slug: str) -> None:
+        self.client.delete_item(
+            TableName=tablename,
+            Key={
+                "slug": {"S": slug}
+            }
+        )
+        return None

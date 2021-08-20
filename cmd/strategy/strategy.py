@@ -104,33 +104,40 @@ def strategy(event, context):
             return
 
         # Trade Open
+        trade_is_open = DYNAMO.key_exists(tablename=HC.table_strategy_meta, hash_key_type="S", hash_key_value=slug,
+                                          hash_key_name="slug")
         should_publish_to_sns = False
-        if trade_action == TradeAction.OPEN:
-            """
-            if not (trade_open_for_slug):
-                open the trade in meta and details
-            else pass 
-            """
-            # Check for an active trade. If not exists, open, else return
+        if trade_action == TradeAction.OPEN and not trade_is_open:
+            should_publish_to_sns = True
+
+            # Update the conditions
             guid_meta = str(uuid.uuid4())
             guid_details = f"{guid_meta}#{trade_action.value}"
             trade_conditions["datetime_proposed"] = datetime.datetime.utcnow().strftime(HC.time_format)
             trade_conditions["action"] = trade_action.value
             trade_conditions["guid_meta"] = guid_meta
             trade_conditions["guid_details"] = guid_details
-            should_publish_to_sns = True
-            # TODO
-            # 1. Write to StrategyMeta (slug, guid)
-            # 2. Write to StrategyDetails (slug, guid_details
 
-        if trade_action == TradeAction.CLOSE:
-            """
-             if (trade_open_for_slug):
-                 close the trade by deleting index from meta and completing the details 
-            else pass
-            """
+            # Update the databases tables
+            item = DYNAMO.create_item_from_dict(trade_conditions)
+            DYNAMO.strategy_meta_create_item(HC.table_strategy_meta, item)
+            DYNAMO.strategy_details_create_item(HC.table_strategy_details, item)
+
+        if trade_action == TradeAction.CLOSE and trade_is_open:
             should_publish_to_sns = True
-            pass
+            # Get the guid
+
+            guid_meta = DYNAMO.strategy_meta_get_item(HC.table_strategy_meta, slug)
+            guid_details = f"{guid_meta}#{trade_action.value}"
+            trade_conditions["datetime_proposed"] = datetime.datetime.utcnow().strftime(HC.time_format)
+            trade_conditions["action"] = trade_action.value
+            trade_conditions["guid_meta"] = guid_meta
+            trade_conditions["guid_details"] = guid_details
+
+            # Update the databases tables
+            item = DYNAMO.create_item_from_dict(trade_conditions)
+            DYNAMO.strategy_details_create_item(HC.table_strategy_details, item)
+            DYNAMO.strategy_meta_delete_item(HC.table_strategy_meta, slug)
 
         if should_publish_to_sns:
             SNS.send_message(topic=HC.sns_topic_strategy, message={
