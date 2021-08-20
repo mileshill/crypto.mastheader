@@ -21,7 +21,7 @@ from internal.service_sns.sns import ServiceSNS
 HC = HarvestConfig()
 DYNAMO = ServiceDynamo()
 SQSHarvest = ServiceSQS(HC.queue_harvest)
-SQSTrade = ServiceSQS(HC.queue_trade)
+SQSStrategy = ServiceSQS(HC.queue_strategy)
 SNS = ServiceSNS()
 san.ApiConfig.api_key = HC.santiment_key
 
@@ -84,8 +84,11 @@ def executor(event, context):
             results = batch.execute()
         except Exception as e:
             if san.is_rate_limit_exception(e):
+                print(e)
+                SQSHarvest.delete_message(record["receiptHandle"])
+                print(f"Deleting record for slug: {slug}")
                 # Rate limit and random backoff between 1 and 10 minutes
-                delay_seconds = san.rate_limit_time_left(e) + random.randint(60, 600)
+                delay_seconds = min(san.rate_limit_time_left(e) + random.randint(60, 600), 900)
                 record["messageAttributes"]["datetime_last_updated"]["stringValue"] = datetime_last_updated
                 message_id = send_to_queue_for_reprocessing(record, delay_seconds)
                 print("Republished to SQS - MessageID: ", message_id)
@@ -95,10 +98,18 @@ def executor(event, context):
         # Rename the columns to metric names
         for df, col in zip(results, santiment_metrics):
             df.rename(columns={"value": col}, inplace=True)
-            df.index = df.index.normalize()
 
-        # Join the dataframes
-        results = pd.concat(results, axis=1).dropna(subset=["price_usd", "active_addresses_24h_change_1d"]).reset_index()
+        # Join the dataframes. If it is missing the two important metrics, it will be delete
+        results = pd.concat(results, axis=1)
+        if "price_usd" not in results.columns or "active_addresses_24h_change_1d" not in results.columns:
+            print(f"Slug {slug} missing desire columns")
+            print(f"Result after concat: \n{results}")
+            print(f"Deleting {slug} from {HC.table_discovery}")
+            DYNAMO.discovery_delete_item(HC.table_discovery, slug)
+
+        # Drop empty records and get datetime back into the columns
+        results = results.dropna(subset=["price_usd", "active_addresses_24h_change_1d"]).reset_index()
+        results_last_datetime = results["datetime"].max() #
         results["datetime"] = results["datetime"].dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 
         results["slug"] = slug
@@ -111,12 +122,11 @@ def executor(event, context):
         SQSHarvest.delete_message(record["receiptHandle"])
 
         # Publish to SQS
-        results_last_datetime = results["datetime"].max()
-        response = SQSTrade.send_message({
+        message_id = SQSStrategy.send_message({
             "MessageBody": slug,
             "MessageAttributes": {
                 "datetime_last_updated": {
-                    "StringValue": results_last_datetime,
+                    "StringValue": results_last_datetime.strftime(HC.time_format),
                     "DataType": "String"
                 },
                 "ticker": {
@@ -125,11 +135,11 @@ def executor(event, context):
                 }
             }
         })
-        print(f"Slug {slug} santiment scraped. Sent to next queue")
+        print(f"Slug {slug} santiment scraped. Sent to next queue: {SQSStrategy.queue_name}")
         return {
             "statusCode": http.HTTPStatus.OK,
             "body": json.dumps({
                 "message": f"Loaded data for {slug}",
-                "message_id": response["MessageId"]
+                "message_id": message_id
             })
         }

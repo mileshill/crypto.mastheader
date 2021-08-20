@@ -24,14 +24,17 @@ provider:
   stage: ${opt:stage, env:STAGE, "dev"}
   region: ca-central-1
   environment:
+    ENV: ${opt:stage, env:STAGE, "dev"}
     KUCOIN_URL_ALLTICKERS: https://api.kucoin.com/api/v1/market/allTickers
     SANTIMENT_KEY: ${env:SANTIMENT_KEY}
     TABLE_DISCOVERY: ${self:custom.tableDiscovery}
     TABLE_HARVEST: ${self:custom.tableHarvest}
-    TABLE_STRATEGY: ${self:custom.tableHarvest}
+    TABLE_STRATEGY_META: ${self:custom.tableStrategyMeta}
+    TABLE_STRATEGY_DETAILS: ${self:custom.tableStrategyDetails}
     QUEUE_HARVEST: ${self:custom.queueHarvest}
-    QUEUE_STRATEGY: ${self:custom.queueTrade}
+    QUEUE_STRATEGY: ${self:custom.queueStrategy}
     SNS_TOPIC_DISCOVERY: ${self:custom.snsTopicDiscovery}
+    SNS_TOPIC_STRATEGY: ${self:custom.snsTopicStrategy}
     SES_SENDER: ${self:custom.sesSender}
     SES_RECIPIENT: ${self:custom.sesRecipient}
     STRATEGY_DAA_ENTER : ${self:custom.strategyDAAEnter}
@@ -65,17 +68,24 @@ provider:
     - Effect: Allow
       Action: "ses:*"
       Resource: "*"
+    - Effect: Allow
+      Action: kms:Decrypt
+      Resource: "*"
 
 custom:
   tableDiscovery: discovery-${opt:stage, env:STAGE, "dev"}
   tableHarvest: harvest-${opt:stage, env:STAGE, "dev"}
-  tableStrategy: strategy-${opt:stage, env:STAGE, "dev"}
+  tableStrategyMeta: strategyMeta-${opt:stage, env:STAGE, "dev"}
+  tableStrategyDetails: strategyDetails-${opt:stage, env:STAGE, "dev"}
   queueHarvest: harvest-${opt:stage, env:STAGE, "dev"}
   queueStrategy: strategy-${opt:stage, env:STAGE, "dev"}
   sesSender: crypto.mastheader@gmail.com
   sesRecipient: crypto.mastheader@gmail.com
   snsTopicDiscovery: discovery-${opt:stage, env:STAGE, "dev"}
+  snsTopicStrategy: strategy-${opt:stage, env:STAGE, "dev"}
   snsTopicHarvest: harvest-${opt:stage, env:STAGE, "dev"}
+  timeoutHarvest: 300
+  timeoutStrategy: 120
   strategyDAAEnter: 0.2
   strategyDAAExit: -0.4
   strategySMALookback: 13
@@ -86,19 +96,19 @@ custom:
     - table: TableHarvest
       read:
         minimum: 1
-        maximum: 100
+        maximum: 500
         usage: 0.75
       write:
-        minimum: 2
+        minimum: 1
         maximum: 10000
         usage: 0.75
-    - table: TableTrade
+    - table: TableStrategy
       read:
         minimum: 1
         maximum: 100
         usage: 0.75
       write:
-        minimum: 2
+        minimum: 1
         maximum: 10000
         usage: 0.75
 plugins:
@@ -109,9 +119,9 @@ plugins:
 functions:
   discovery:
     handler: cmd/discovery/handler.discovery
-    timeout: 120
+    timeout: ${self:custom.timeoutHarvest}
     events:
-      - schedule: cron(0 0 * * ? *) # 00:00 UTC (Midnight) every day
+      - schedule: cron(0 0 ? * SUN *) # Sundays at 00:00 UTC
   discoveryNotify:
     handler: cmd/discovery/handler.notify
     events:
@@ -119,10 +129,10 @@ functions:
   harvestPrimer:
     handler: cmd/harvest/primer.primer
     events:
-      - schedule: cron(1 0 * * ? *) # 01:00 UTC  (Midnight + 1 min) every day
+      - schedule: cron(1 * ? * * *) # 01:00 UTC  (Midnight + 1 min) every day
   harvestExecutor:
     handler: cmd/harvest/executor.executor
-    timeout: 120
+    timeout: ${self:custom.timeoutHarvest}
     events:
       - sqs:
           arn:
@@ -130,15 +140,16 @@ functions:
               - QueueHarvest
               - Arn
           batchSize: 1
-    strategy:
-      handler: cmd/strategy/strategy.strategy
-      events:
-        - sqs:
-            arn:
-              Fn::GetAtt:
-                - QueueTrade
-                - Arn
-            batchSize: 1
+  strategy:
+    handler: cmd/strategy/strategy.strategy
+    timeout: ${self:custom.timeoutStrategy}
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - QueueStrategy
+              - Arn
+          batchSize: 1
 resources:
   Resources:
     TableDiscovery:
@@ -171,19 +182,32 @@ resources:
         ProvisionedThroughput:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
-    TableStrategy:
+    TableStrategyMeta:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: ${self:custom.tableStrategy}
+        TableName: ${self:custom.tableStrategyMeta}
         AttributeDefinitions:
           - AttributeName: slug
-            AttributeType: S
-          - AttributeName: datetime_proposed
             AttributeType: S
         KeySchema:
           - AttributeName: slug
             KeyType: HASH
-          - AttributeName: datetime_proposed
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+    TableStrategyDetails:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.tableStrategyDetails}
+        AttributeDefinitions:
+          - AttributeName: slug
+            AttributeType: S
+          - AttributeName: guid_details
+            AttributeType: S
+        KeySchema:
+          - AttributeName: slug
+            KeyType: HASH
+          - AttributeName: guid_details
             KeyType: RANGE
         ProvisionedThroughput:
           ReadCapacityUnits: 1
@@ -192,7 +216,9 @@ resources:
       Type: AWS::SQS::Queue
       Properties:
         QueueName: ${self:custom.queueHarvest}
+        VisibilityTimeout: 300
     QueueStrategy:
       Type: AWS::SQS::Queue
       Properties:
         QueueName: ${self:custom.queueStrategy}
+        VisibilityTimeout: 240

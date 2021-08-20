@@ -1,4 +1,5 @@
 import datetime
+import uuid
 from typing import Dict, Union, List
 
 import boto3
@@ -75,6 +76,17 @@ class ServiceDynamo:
         )
         return
 
+    @staticmethod
+    def create_item_from_dict(data: Dict) -> Dict:
+        item = {}
+        for k, v in data.items():
+            if type(v) is str:
+                item[k] = {"S": v}
+                continue
+            item[k] = {"N": v}
+        item["datetime_created"] = {"S": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")}
+        return item
+
     def discovery_scan(self, tablename: str) -> List[ItemDiscovery]:
         items = list()
         scan_kwargs = {}
@@ -93,6 +105,15 @@ class ServiceDynamo:
         items = [ItemDiscovery(**item) for item in items]
         return items
 
+    def discovery_delete_item(self, tablename: str, slug: str) -> None:
+        self.client.delete_item(
+            TableName=tablename,
+            Key={
+                "slug": {"S": slug}
+            }
+        )
+        return None
+
     def harvest_create_item(self, tablename: str, data: Dict[str, Union[str, float]]):
         """
         Creates new item in the Discovery table
@@ -110,7 +131,7 @@ class ServiceDynamo:
                 "exchange_inflow_change_1d": {"N": data["exchange_inflow_change_1d"]},
                 "age_consumed": {"N": data["age_consumed"]},
                 "active_addresses_24h_change_1d": {"N": data["active_addresses_24h_change_1d"]},
-                "datetimeCreated": {"S": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")},
+                "datetime_created": {"S": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")},
             }
         )
         return
@@ -124,9 +145,27 @@ class ServiceDynamo:
         )
         return response["Items"][0]["datetime_metric"] if len(response["Items"]) else None
 
-    def harvest_get_data_for_slug_within_range(self, tablename: str, slug: str, date_from: str, date_to: str) -> List[Dict]:
+    def harvest_get_data_for_slug_within_range(self, tablename: str, slug: str, date_from: str, date_to: str) -> List[
+        Dict]:
         table = self.resource.Table(tablename)
         response = table.query(
-            KeyConditionExpression=Key("slug").eq(slug) & Key("datetimeMetric").between(date_from, date_to)
+            KeyConditionExpression=Key("slug").eq(slug) & Key("datetime_metric").between(date_from, date_to)
         )
         return response["Items"] if len(response["Items"]) else None
+
+    def strategy_meta_create_item(self, tablename: str, data: Dict[str, Union[str, float]]) -> None:
+        """
+        Creates new item in the Discovery table
+        :param tablename:
+        :param data:
+        :return:
+        """
+        resp = self.client.put_item(
+            TableName=tablename,
+            Item={
+                "slug": data["slug"],
+                "guid": data["guid_meta"],
+                "datetime_created": data["datetime_created"]
+            }
+        )
+        return
