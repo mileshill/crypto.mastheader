@@ -113,6 +113,7 @@ def executor(event, context):
         except KeyError as e:
             DYNAMO.discovery_delete_item(HC.table_discovery, slug)
             print(f"Key Error: Deleting {slug} from {HC.table_discovery}")
+            return
         results_last_datetime = results["datetime"].max() #
         results["datetime"] = results["datetime"].dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -122,7 +123,8 @@ def executor(event, context):
 
         # Write everything to Dynamo
         for sample in results:
-            DYNAMO.harvest_create_item(HC.table_harvest, sample)
+            item = DYNAMO.create_item_from_dict(results)
+            DYNAMO.harvest_create_item(HC.table_harvest, item)
         SQSHarvest.delete_message(record["receiptHandle"])
 
         # Publish to SQS

@@ -111,7 +111,8 @@ def discovery(event, context):
                 td,
                 hash_key_name="slug", hash_key_value=row["slug"], hash_key_type="S"
         ):
-            DYNAMO.discovery_create_item(td, row)
+            item = DYNAMO.create_item_from_dict(row)
+            DYNAMO.discovery_create_item(td, item)
             new_slugs.append(row["slug"])
 
     # Publish the data to SNS

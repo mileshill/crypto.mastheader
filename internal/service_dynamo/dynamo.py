@@ -54,7 +54,7 @@ class ServiceDynamo:
             return False
         return True
 
-    def discovery_create_item(self, tablename: str, data: Dict[str, Union[str, float]]):
+    def discovery_create_item(self, tablename: str, item: Dict[str, Dict[str, str]]):
         """
         Creates new item in the Discovery table
         :param tablename:
@@ -63,15 +63,7 @@ class ServiceDynamo:
         """
         resp = self.client.put_item(
             TableName=tablename,
-            Item={
-                "slug": {"S": data["slug"]},
-                "marketSegment": {"S": data["marketSegment"]},
-                "name": {"S": data["name"]},
-                "ticker": {"S": data["ticker"]},
-                "totalSupply": {"N": data["totalSupply"]},
-                "timestampCreated": {"N": str(int(datetime.datetime.utcnow().timestamp()))},
-                "datetimeCreated": {"S": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")}
-            }
+            Item=item
         )
         return
 
@@ -113,7 +105,7 @@ class ServiceDynamo:
         )
         return None
 
-    def harvest_create_item(self, tablename: str, data: Dict[str, Union[str, float]]):
+    def harvest_create_item(self, tablename: str, item: Dict[str, Dict[str, str]]):
         """
         Creates new item in the Discovery table
         :param tablename:
@@ -122,16 +114,7 @@ class ServiceDynamo:
         """
         resp = self.client.put_item(
             TableName=tablename,
-            Item={
-                "slug": {"S": data["slug"]},
-                "datetime_metric": {"S": data["datetime"]},
-                "price_usd": {"N": data["price_usd"]},
-                "exchange_outflow_change_1d": {"N": data["exchange_outflow_change_1d"]},
-                "exchange_inflow_change_1d": {"N": data["exchange_inflow_change_1d"]},
-                "age_consumed": {"N": data["age_consumed"]},
-                "active_addresses_24h_change_1d": {"N": data["active_addresses_24h_change_1d"]},
-                "datetime_created": {"S": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")},
-            }
+            Item=item
         )
         return
 
