@@ -5,6 +5,7 @@ a trade action. If a trade action should be made, publish to an SNS topic, else,
 """
 import datetime
 import enum
+import json
 import uuid
 from typing import Dict
 
@@ -107,6 +108,7 @@ def strategy(event, context):
         trade_is_open = DYNAMO.key_exists(tablename=HC.table_strategy_meta, hash_key_type="S", hash_key_value=slug,
                                           hash_key_name="slug")
         should_publish_to_sns = False
+        sns_message = {"Subject": "", "Message": ""}
         if trade_action == TradeAction.OPEN and not trade_is_open:
             should_publish_to_sns = True
 
@@ -123,6 +125,10 @@ def strategy(event, context):
             DYNAMO.strategy_meta_create_item(HC.table_strategy_meta, item)
             DYNAMO.strategy_details_create_item(HC.table_strategy_details, item)
 
+            sns_message = {
+                "Subject": f"{slug} - {trade_action.value}",
+                "Message": json.dumps(trade_conditions, indent=4)
+            }
         if trade_action == TradeAction.CLOSE and trade_is_open:
             should_publish_to_sns = True
             # Get the guid
@@ -139,7 +145,13 @@ def strategy(event, context):
             DYNAMO.strategy_details_create_item(HC.table_strategy_details, item)
             DYNAMO.strategy_meta_delete_item(HC.table_strategy_meta, slug)
 
+            sns_message = {
+                "Subject": f"{slug} - {trade_action.value}",
+                "Message": json.dumps(trade_conditions, indent=4)
+            }
+
         if should_publish_to_sns:
+            SNS.send_message(HC.sns_topic_discovery, sns_message)
             SNS.send_message(topic=HC.sns_topic_strategy, message={
                 "Subject": slug,
                 "Message": trade_action.value,

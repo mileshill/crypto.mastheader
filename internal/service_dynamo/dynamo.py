@@ -178,7 +178,7 @@ class ServiceDynamo:
                 "slug": {"S": slug}
             }
         )
-        return resp["Item"]["guid"]
+        return resp["Item"]["guid"]["S"]
 
     def strategy_meta_delete_item(self, tablename: str, slug: str) -> None:
         self.client.delete_item(
