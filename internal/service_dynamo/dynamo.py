@@ -79,10 +79,10 @@ class ServiceDynamo:
     def create_item_from_dict(data: Dict) -> Dict:
         item = {}
         for k, v in data.items():
-            if type(v) is str:
-                item[k] = {"S": v}
+            if type(v) in (str, bool):
+                item[k] = {"S": str(v)}
                 continue
-            item[k] = {"N": v}
+            item[k] = {"N": str(v)}
         item["datetime_created"] = {"S": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")}
         return item
 

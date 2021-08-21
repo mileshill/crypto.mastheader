@@ -86,11 +86,11 @@ custom:
   snsTopicHarvest: harvest-${opt:stage, env:STAGE, "dev"}
   timeoutHarvest: 300
   timeoutStrategy: 120
-  strategyDAAEnter: 0.2
+  strategyDAAEnter: 0.1
   strategyDAAExit: -0.4
-  strategySMALookback: 13
-  strategyVolatilityEnter: 1.2
-  strategyVolatilityExit: 1.5
+  strategySMALookback: 7
+  strategyVolatilityEnter: 0.7
+  strategyVolatilityExit: 1.4
   logRetentionInDays: 7
   capacities:
     - table: TableHarvest
@@ -102,7 +102,16 @@ custom:
         minimum: 1
         maximum: 10000
         usage: 0.75
-    - table: TableStrategy
+    - table: TableStrategyDetails
+      read:
+        minimum: 1
+        maximum: 100
+        usage: 0.75
+      write:
+        minimum: 1
+        maximum: 10000
+        usage: 0.75
+    - table: TableStrategyMeta
       read:
         minimum: 1
         maximum: 100

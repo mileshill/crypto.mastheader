@@ -40,7 +40,7 @@ def compute_trade_conditions(df: pd.DataFrame) -> Dict:
 
     # Check for an all positive sma derivative for the strategy_sma_lookback
     df["sma_derivative_pos_trend"] = df["sma_derivative"] \
-        .rolling(window=HC.strategy_sma_lookback) \
+        .rolling(window=int(HC.strategy_sma_lookback)) \
         .apply(lambda data: all(sample > 0 for sample in data))
 
     # Absolute difference between price and SMA
@@ -53,7 +53,7 @@ def compute_trade_conditions(df: pd.DataFrame) -> Dict:
     df["daa_exit"] = df["active_addresses_24h_change_1d"] < HC.strategy_daa_exit
 
     # Trending
-    df["trending"] = (df["sma_der_pos"] == 1) & (df["price_usd"] > df["sma"])
+    df["trending"] = (df["sma_derivative_pos_trend"] == 1) & (df["price_usd"] > df["sma"])
 
     # Trade actions
     df["trade_open"] = df["daa_enter"] & df["trending"] & df["volatility_enter"]
@@ -100,7 +100,7 @@ def strategy(event, context):
 
         # Trade decisions
         if trade_action == TradeAction.PASS:
-            print(f"Slug({slug} - No trade actions")
+            print(f"Slug({slug}) - No trade actions")
             return
 
         # Trade Open

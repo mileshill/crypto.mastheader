@@ -108,7 +108,11 @@ def executor(event, context):
             DYNAMO.discovery_delete_item(HC.table_discovery, slug)
 
         # Drop empty records and get datetime back into the columns
-        results = results.dropna(subset=["price_usd", "active_addresses_24h_change_1d"]).reset_index()
+        try:
+            results = results.dropna(subset=["price_usd", "active_addresses_24h_change_1d"]).reset_index()
+        except KeyError as e:
+            DYNAMO.discovery_delete_item(HC.table_discovery, slug)
+            print(f"Key Error: Deleting {slug} from {HC.table_discovery}")
         results_last_datetime = results["datetime"].max() #
         results["datetime"] = results["datetime"].dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 
