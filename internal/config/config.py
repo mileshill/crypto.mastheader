@@ -22,6 +22,11 @@ class HarvestConfig:
         self.time_format = "%Y-%m-%dT%H:%M:%SZ"
         self.env = os.getenv("ENV", None)
 
+        # Kucoin
+        self.kucoin_key = os.getenv("KUCOIN_KEY")
+        self.kucoin_secret = os.getenv("KUCOIN_SECRET")
+        self.kucoin_api_passphrase = os.getenv("KUCOIN_API_PASSPHRASE")
+
         # Strategy Data
         self.strategy_daa_enter = os.getenv("STRATEGY_DAA_ENTER", None)
         self.strategy_daa_exit = os.getenv("STRATEGY_DAA_EXIT", None)

@@ -70,12 +70,22 @@ class ServiceDynamo:
     @staticmethod
     def create_item_from_dict(data: Dict) -> Dict:
         item = {}
-        for k, v in data.items():
-            if type(v) in (str, bool):
-                item[k] = {"S": str(v)}
-                continue
-            item[k] = {"N": str(v)}
-        item["datetime_created"] = {"S": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")}
+        try:
+            for k, v in data.items():
+                if type(v) is dict and "S" in v:
+                    item[k] = v["S"]
+                    continue
+                if type(v) in (float, int):
+                    item[k] = {"N": str(v)}
+                if type(v) is datetime.datetime:
+                    item[k] = {"S": v.strftime("%Y-%m-%dT%H:%M:%SZ")}
+                    continue
+                else:
+                    item[k] = {"S": str(v)}
+            item["datetime_created"] = {"S": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")}
+        except Exception as e:
+            print(e)
+            print("DATA: \n", data)
         return item
 
     def discovery_scan(self, tablename: str) -> List[ItemDiscovery]:

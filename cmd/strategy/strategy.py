@@ -122,8 +122,8 @@ def strategy(event, context):
 
             # Update the databases tables
             item = DYNAMO.create_item_from_dict(trade_conditions)
-            DYNAMO.strategy_meta_create_item(HC.table_strategy_meta, item)
             DYNAMO.strategy_details_create_item(HC.table_strategy_details, item)
+            DYNAMO.strategy_meta_create_item(HC.table_strategy_meta, item)
 
             sns_message = {
                 "Subject": f"{slug} - {trade_action.value}",
@@ -151,7 +151,9 @@ def strategy(event, context):
             }
 
         if should_publish_to_sns:
-            SNS.send_message(HC.sns_topic_discovery, sns_message)
+            #SNS.send_message(HC.sns_topic_discovery, sns_message)
+
+            # TODO - Make this a Queue
             SNS.send_message(topic=HC.sns_topic_strategy, message={
                 "Subject": slug,
                 "Message": trade_action.value,

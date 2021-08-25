@@ -86,12 +86,15 @@ custom:
   snsTopicHarvest: harvest-${opt:stage, env:STAGE, "dev"}
   timeoutHarvest: 300
   timeoutStrategy: 120
-  strategyDAAEnter: 0.1
-  strategyDAAExit: -0.4
-  strategySMALookback: 7
-  strategyVolatilityEnter: 0.7
-  strategyVolatilityExit: 1.4
+  strategyDAAEnter: 0.19
+  strategyDAAExit: -0.43
+  strategySMALookback: 1
+  strategyVolatilityEnter: 1.46
+  strategyVolatilityExit: 1.47
   logRetentionInDays: 7
+  prune:
+    automatic: true
+    number: 2
   capacities:
     - table: TableHarvest
       read:
@@ -124,6 +127,7 @@ plugins:
   - serverless-python-requirements
   - serverless-plugin-log-retention
   - serverless-dynamodb-autoscaling
+  - serverless-prune-plugin
 
 functions:
   discovery:
@@ -138,7 +142,7 @@ functions:
   harvestPrimer:
     handler: cmd/harvest/primer.primer
     events:
-      - schedule: cron(1 * ? * * *) # 01:00 UTC  (Midnight + 1 min) every day
+      - schedule: cron(1 0/4 ? * * *) # 01:00 UTC  (Midnight + 1 min) every day
   harvestExecutor:
     handler: cmd/harvest/executor.executor
     timeout: ${self:custom.timeoutHarvest}
