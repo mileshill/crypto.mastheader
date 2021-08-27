@@ -3,12 +3,12 @@ from .account import Account
 
 
 class TestAccount:
-    os_vars = {
+    config = {
         "key": os.getenv("KUCOIN_KEY"),
         "secret": os.getenv("KUCOIN_SECRET"),
-        "api_pass_phrase": os.getenv("KUCOIN_API_PASSPHRASE")
+        "api_pass_phrase": os.getenv("KUCOIN_API_PASSPHRASE"),
+        "max_trades": 10
     }
-
-    account = Account(**os_vars)
+    account = Account(**config)
     print(account)
 

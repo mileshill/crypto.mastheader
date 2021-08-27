@@ -1,5 +1,6 @@
 import datetime
 from typing import Dict, Union, List
+from math import floor
 
 import boto3
 from boto3.dynamodb.conditions import Key
@@ -198,3 +199,84 @@ class ServiceDynamo:
             }
         )
         return None
+
+    def account_get_max_position_size(self, tablename: str, account_name: str = "TRADE") -> float:
+        resp = self.client.get_item(
+            TableName=tablename,
+            Key={
+                "account_name": {"S": account_name}
+            }
+        )
+        print(f"Response: account_get_max_position_size: {resp}")
+        position_max = float(resp["Item"]["position_max"]["N"])
+        balance_avail = float(resp["Item"]["balance_avail"]["N"])
+        return min(position_max, balance_avail)
+
+    def account_set_max_position_size(self, tablename: str, position_size: float, account_name: str = "TRADE"):
+        resp = self.client.update_item(
+            TableName=tablename,
+            Key={
+                "account_name": {"S": account_name},
+            },
+            AttributeUpdates={
+                "position_max": {"Value": {"N": str(position_size)}, "Action": "PUT"}
+            }
+        )
+        return
+
+    def account_update_trades_open(self, tablename: str, account_name: str, num_open_trades: int):
+        resp = self.client.update_item(
+            TableName=tablename,
+            Key={
+                "account_name": {"S": account_name},
+            },
+            AttributeUpdates={
+                "trades_open": {"Value": {"N": str(num_open_trades)}, "Action": "PUT"},
+                "datetime_updated": {"Value": {"S": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")}, "Action": "PUT"}
+            }
+        )
+        return
+
+    def account_get_trades_open(self, tablename: str, account_name: str):
+        resp = self.client.get_item(
+            TableName=tablename,
+            Key={
+                "account_name": {"S": account_name}
+            }
+        )
+        if not resp.get("Item"):
+            return None
+
+        return int(resp.get("Item", {}).get("trades_open", {}).get("N", None))
+
+    def account_update_available_balance(self, tablename: str, account_name: str, balance_avail: float):
+        resp = self.client.update_item(
+            TableName=tablename,
+            Key={
+                "account_name": {"S": account_name}
+            },
+            AttributeUpdates={
+                "balance_avail": {"Value": {"N": str(balance_avail)}, "Action": "PUT"}
+            }
+        )
+
+    def account_update(self, tablename: str, account_name: str, trades_max: int, trades_open: int, balance: float,
+                       balance_avail: float, position_max: float):
+        # Account does not exist
+        resp = self.client.update_item(
+            TableName=tablename,
+            Key={
+                "account_name": {"S": account_name}
+            },
+            AttributeUpdates={
+                "trades_max": {"Value": {"N": str(trades_max)}, "Action": "PUT"},
+                "trades_open": {"Value": {"N": str(trades_open)}, "Action": "PUT"},
+                "balance": {"Value": {"N": str(balance)}, "Action": "PUT"},
+                "balance_avail": {"Value": {"N": str(balance_avail)}, "Action": "PUT"},
+                "position_max": {"Value": {"N": str(position_max)}, "Action": "PUT"},
+                "datetime_created": {"Value": {"S": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")},
+                                     "Action": "PUT"},
+                "datetime_updated": {"Value": {"S": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")},
+                                     "Action": "PUT"}
+            }
+        )

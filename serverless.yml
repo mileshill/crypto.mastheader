@@ -1,38 +1,34 @@
-# Welcome to Serverless!
-#
-# This file is the main config file for your service.
-# It's very minimal at this point and uses default values.
-# You can always add more config options for more control.
-# We've included some commented out config examples here.
-# Just uncomment any of them to get that config option.
-#
-# For full config options, check the docs:
-#    docs.serverless.com
-#
-# Happy Coding!
-
+# crypto-ixian
+# Crypto Ixian is a serverless trading bot that leverages on-chain analytics from the
+# Santiment API and trading pairs from KuCoin. The bot executes the following responsibilites:
+# 1. Discovery of new pairs each week
+# 2. Harvesting data from Santiment for each of the trading pairs on a regular interval
+# 3. Trading strategy implementation to determine if trades should be open or closes (all trades are BUY side)
+# 4. Account interacts with KuCoin to determine when trades can be made, and placing orders
 service: crypto-ixian
 app: crypto-ixian-bot
 
-# You can pin your service to only deploy with a specific Serverless version
-# Check out our docs for more details
 frameworkVersion: '2'
 
 provider:
   name: aws
   runtime: python3.9
   stage: ${opt:stage, env:STAGE, "dev"}
-  region: ca-central-1
+  region: ca-central-1  # Kucoin friendly region for API access
   environment:
     ENV: ${opt:stage, env:STAGE, "dev"}
-    KUCOIN_URL_ALLTICKERS: https://api.kucoin.com/api/v1/market/allTickers
+    KUCOIN_URL_ALLTICKERS: https://api.kucoin.com/api/v1/market/allTickers  # Pairs for discovery
     SANTIMENT_KEY: ${env:SANTIMENT_KEY}
     TABLE_DISCOVERY: ${self:custom.tableDiscovery}
     TABLE_HARVEST: ${self:custom.tableHarvest}
     TABLE_STRATEGY_META: ${self:custom.tableStrategyMeta}
     TABLE_STRATEGY_DETAILS: ${self:custom.tableStrategyDetails}
+    TABLE_TRADE_META: ${self:custom.tableTradeMeta}
+    TABLE_TRADE_DETAILS: ${self:custom.tableTradeDetails}
+    TABLE_ACCOUNT: ${self:custom.tableAccount}
     QUEUE_HARVEST: ${self:custom.queueHarvest}
     QUEUE_STRATEGY: ${self:custom.queueStrategy}
+    QUEUE_TRADE: ${self:custom.queueTrade}
     SNS_TOPIC_DISCOVERY: ${self:custom.snsTopicDiscovery}
     SNS_TOPIC_STRATEGY: ${self:custom.snsTopicStrategy}
     SES_SENDER: ${self:custom.sesSender}
@@ -42,6 +38,10 @@ provider:
     STRATEGY_SMA_LOOKBACK : ${self:custom.strategySMALookback}
     STRATEGY_VOLATILITY_ENTER : ${self:custom.strategyVolatilityEnter}
     STRATEGY_VOLATILITY_EXIT : ${self:custom.strategyVolatilityExit}
+    STRATEGY_MAX_TRADES: ${self:custom.strategyMaxTrades}
+    KUCOIN_KEY : ${self:custom.kucoinKey}
+    KUCOIN_SECRET: ${self:custom.kucoinSecret}
+    KUCOIN_API_PASSPHRASE: ${self:custom.kucoinApiPassphrase}
   iamRoleStatements:
     - Effect: Allow
       Action:
@@ -77,8 +77,12 @@ custom:
   tableHarvest: harvest-${opt:stage, env:STAGE, "dev"}
   tableStrategyMeta: strategyMeta-${opt:stage, env:STAGE, "dev"}
   tableStrategyDetails: strategyDetails-${opt:stage, env:STAGE, "dev"}
+  tableTradeMeta: tradeMeta-${opt:stage, env:STAGE, "dev"}
+  tableTradeDetails: tradeDetails-${opt:stage, env:STAGE, "dev"}
+  tableAccount: account-${opt:stage, env:STAGE, "dev"}
   queueHarvest: harvest-${opt:stage, env:STAGE, "dev"}
   queueStrategy: strategy-${opt:stage, env:STAGE, "dev"}
+  queueTrade: trade-${opt:stage, env:STAGE, "dev"}
   sesSender: crypto.mastheader@gmail.com
   sesRecipient: crypto.mastheader@gmail.com
   snsTopicDiscovery: discovery-${opt:stage, env:STAGE, "dev"}
@@ -86,15 +90,21 @@ custom:
   snsTopicHarvest: harvest-${opt:stage, env:STAGE, "dev"}
   timeoutHarvest: 300
   timeoutStrategy: 120
-  strategyDAAEnter: 0.19
-  strategyDAAExit: -0.43
+  strategyDAAEnter: 0.11
+  strategyDAAExit: -0.45
   strategySMALookback: 1
-  strategyVolatilityEnter: 1.46
-  strategyVolatilityExit: 1.47
-  logRetentionInDays: 7
+  strategyMaxTrades: 10
+  strategyVolatilityEnter: 1.15
+  strategyVolatilityExit: 1.72
+  kucoinKey: ${env:KUCOIN_KEY}
+  kucoinSecret: ${env:KUCOIN_SECRET}
+  kucoinApiPassphrase: ${env:KUCOIN_API_PASSPHRASE}
+  logRetentionInDays: 7  # Logs expire once they reach N days. Prevents excessive CloudWatch storage
+  # Pruning manages the number of Lambda versions that are maintained. Storage cost reduction.
   prune:
     automatic: true
     number: 2
+  # Capacity configures the autoscaling features of Dynamo
   capacities:
     - table: TableHarvest
       read:
@@ -130,19 +140,23 @@ plugins:
   - serverless-prune-plugin
 
 functions:
+  # Discovery looks for new tokens in the intersection of Santiment and Kucoin paris
   discovery:
     handler: cmd/discovery/handler.discovery
     timeout: ${self:custom.timeoutHarvest}
     events:
       - schedule: cron(0 0 ? * SUN *) # Sundays at 00:00 UTC
+  # Discovery notify sends an email with the number of pairs and pair symbols that were detected
   discoveryNotify:
     handler: cmd/discovery/handler.notify
     events:
       - sns: ${self:custom.snsTopicDiscovery}
+  # Harvest Primer sweeps the Discovery table and queues up the pairs for the data harvest
   harvestPrimer:
     handler: cmd/harvest/primer.primer
     events:
       - schedule: cron(1 0/4 ? * * *) # 01:00 UTC  (Midnight + 1 min) every day
+  # Harvest Executor queries Santiment to get the latest metrics on each of the trading pairs
   harvestExecutor:
     handler: cmd/harvest/executor.executor
     timeout: ${self:custom.timeoutHarvest}
@@ -153,6 +167,7 @@ functions:
               - QueueHarvest
               - Arn
           batchSize: 1
+  # Strategy applies the conditions to determine if a trade should be open or closed
   strategy:
     handler: cmd/strategy/strategy.strategy
     timeout: ${self:custom.timeoutStrategy}
@@ -163,6 +178,15 @@ functions:
               - QueueStrategy
               - Arn
           batchSize: 1
+  trade:
+    handler: cmd/trade/trade.trade
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - QueueTrade
+              - Arn
+          batchSize: 10
 resources:
   Resources:
     TableDiscovery:
@@ -225,6 +249,49 @@ resources:
         ProvisionedThroughput:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
+    TableTradeMeta:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.tableTradeMeta}
+        AttributeDefinitions:
+          - AttributeName: slug
+            AttributeType: S
+        KeySchema:
+          - AttributeName: slug
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+    TableTradeDetails:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.tableTradeDetails}
+        AttributeDefinitions:
+          - AttributeName: slug
+            AttributeType: S
+          - AttributeName: guid_details
+            AttributeType: S
+        KeySchema:
+          - AttributeName: slug
+            KeyType: HASH
+          - AttributeName: guid_details
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+    TableAccount:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.tableAccount}
+        AttributeDefinitions:
+          - AttributeName: account_name
+            AttributeType: S
+        KeySchema:
+          - AttributeName: account_name
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
     QueueHarvest:
       Type: AWS::SQS::Queue
       Properties:
@@ -234,4 +301,9 @@ resources:
       Type: AWS::SQS::Queue
       Properties:
         QueueName: ${self:custom.queueStrategy}
+        VisibilityTimeout: 240
+    QueueTrade:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:custom.queueTrade}
         VisibilityTimeout: 240

@@ -14,10 +14,12 @@ import pandas as pd
 from internal.config.config import HarvestConfig
 from internal.service_dynamo.dynamo import ServiceDynamo
 from internal.service_sns.sns import ServiceSNS
+from internal.service_sqs.sqs import ServiceSQS
 
 HC = HarvestConfig()
 DYNAMO = ServiceDynamo()
-SNS = ServiceSNS()
+SQS = ServiceSQS(HC.queue_trade)
+
 
 
 class TradeAction(enum.Enum):
@@ -107,10 +109,10 @@ def strategy(event, context):
         # Trade Open
         trade_is_open = DYNAMO.key_exists(tablename=HC.table_strategy_meta, hash_key_type="S", hash_key_value=slug,
                                           hash_key_name="slug")
-        should_publish_to_sns = False
+        should_publish_to_sqs = False
         sns_message = {"Subject": "", "Message": ""}
         if trade_action == TradeAction.OPEN and not trade_is_open:
-            should_publish_to_sns = True
+            should_publish_to_sqs = True
 
             # Update the conditions
             guid_meta = str(uuid.uuid4())
@@ -130,7 +132,7 @@ def strategy(event, context):
                 "Message": json.dumps(trade_conditions, indent=4)
             }
         if trade_action == TradeAction.CLOSE and trade_is_open:
-            should_publish_to_sns = True
+            should_publish_to_sqs = True
             # Get the guid
 
             guid_meta = DYNAMO.strategy_meta_get_item(HC.table_strategy_meta, slug)
@@ -150,17 +152,24 @@ def strategy(event, context):
                 "Message": json.dumps(trade_conditions, indent=4)
             }
 
-        if should_publish_to_sns:
-            #SNS.send_message(HC.sns_topic_discovery, sns_message)
-
-            # TODO - Make this a Queue
-            SNS.send_message(topic=HC.sns_topic_strategy, message={
-                "Subject": slug,
-                "Message": trade_action.value,
+        if should_publish_to_sqs:
+            SQS.send_message({
+                "DelaySeconds": 0,
+                "MessageBody": slug,
                 "MessageAttributes": {
-                    "action_guid": {
-                        "DataType": "String",
-                        "StringValue": trade_action.value
+                    "side": {
+                        "StringValue":  trade_action.value,
+                        "DataType": "String"
+                    },
+                    "ticker": {
+                        "StringValue": ticker,
+                        "DataType": "String"
+                    },
+                    "strategy_guid": {
+                        "StringValue": guid_meta,
+                        "DataType": "String"
                     }
                 }
             })
+
+
