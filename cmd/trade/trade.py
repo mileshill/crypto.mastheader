@@ -1,5 +1,6 @@
 import json
 import uuid
+from itertools import chain
 from typing import List, Dict
 
 import kucoin.exceptions
@@ -14,6 +15,7 @@ HC = HarvestConfig()
 DYNAMO = ServiceDynamo()
 SNS = ServiceSNS()
 SQSTrade = ServiceSQS(HC.queue_trade)
+SQSMonitor = ServiceSQS(HC.queue_monitor)
 
 
 class Signal:
@@ -48,12 +50,12 @@ def process_signals_sell(account: Account, signals_sell: List[Signal]) -> List[D
         # 1. Show a balance in KuCoin
         # 2. Be represented in the tradeMeta table by the slug
         kucoin_acct = account.get_open_position_by_symbol(signal.ticker)
-        exists_in_db = DYNAMO.key_exists(
-            HC.table_trade_meta,
-            hash_key_name="slug", hash_key_type="S", hash_key_value=signal.slug
-        )
+        # exists_in_db = DYNAMO.key_exists(
+        #     HC.table_trade_meta,
+        #     hash_key_name="slug", hash_key_type="S", hash_key_value=signal.slug
+        # )
 
-        if kucoin_acct is None or not exists_in_db:
+        if kucoin_acct is None: #or not exists_in_db:
             print(f"No open account for closing signal on slug: {signal.slug}")
             print(json.dumps(signal.to_dict(), indent=4))
             continue
@@ -164,7 +166,22 @@ def trade(event, context):
     print("BUY: ", signals_buy)
     print("SELL: ", signals_sell)
 
+    # Clear the Trade Queue
     for record in event["Records"]:
         SQSTrade.delete_message(
             receipt_handle=record["receiptHandle"]
         )
+    # Push orders to monitoring so the balances can be updated
+    for trade_detail in chain(signals_sell, signals_buy):
+        SQSMonitor.send_message({
+            "DelaySeconds": 900,
+            "MessageBody": trade_detail["slug"],
+            "MessageAttributes": {
+                key: {
+                    "StringValue": value,
+                    "DataType": "String"
+                } for key, value in trade_detail.items()
+            }
+        })
+
+

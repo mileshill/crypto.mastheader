@@ -29,6 +29,7 @@ provider:
     QUEUE_HARVEST: ${self:custom.queueHarvest}
     QUEUE_STRATEGY: ${self:custom.queueStrategy}
     QUEUE_TRADE: ${self:custom.queueTrade}
+    QUEUE_MONITOR: ${self:custom.queueMonitor}
     SNS_TOPIC_DISCOVERY: ${self:custom.snsTopicDiscovery}
     SNS_TOPIC_STRATEGY: ${self:custom.snsTopicStrategy}
     SES_SENDER: ${self:custom.sesSender}
@@ -83,6 +84,7 @@ custom:
   queueHarvest: harvest-${opt:stage, env:STAGE, "dev"}
   queueStrategy: strategy-${opt:stage, env:STAGE, "dev"}
   queueTrade: trade-${opt:stage, env:STAGE, "dev"}
+  queueMonitor: monitor-${opt:stage, env:STAGE, "dev"}
   sesSender: crypto.mastheader@gmail.com
   sesRecipient: crypto.mastheader@gmail.com
   snsTopicDiscovery: discovery-${opt:stage, env:STAGE, "dev"}
@@ -307,3 +309,8 @@ resources:
       Properties:
         QueueName: ${self:custom.queueTrade}
         VisibilityTimeout: 240
+    QueueMonitor:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:custom.queueMonitor}
+        VisibilityTimeout: 900

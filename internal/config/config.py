@@ -19,6 +19,7 @@ class HarvestConfig:
         self.queue_harvest = os.getenv("QUEUE_HARVEST", None)
         self.queue_strategy = os.getenv("QUEUE_STRATEGY", None)
         self.queue_trade = os.getenv("QUEUE_TRADE", None)
+        self.queue_monitor = os.getenv("QUEUE_MONITOR", None)
         self.sns_topic_discovery = os.getenv("SNS_TOPIC_DISCOVERY", None)
         self.sns_topic_strategy = os.getenv("SNS_TOPIC_STRATEGY", None)
         self.sns_sender = os.getenv("SES_SENDER", None)
