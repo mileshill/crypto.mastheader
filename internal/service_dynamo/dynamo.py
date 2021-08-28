@@ -280,3 +280,10 @@ class ServiceDynamo:
                                      "Action": "PUT"}
             }
         )
+
+    def account_log_put_item(self, tablename: str, item: Dict):
+        resp = self.client.put_item(
+            TableName=tablename,
+            Item=item
+        )
+        return

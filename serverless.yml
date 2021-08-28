@@ -26,6 +26,7 @@ provider:
     TABLE_TRADE_META: ${self:custom.tableTradeMeta}
     TABLE_TRADE_DETAILS: ${self:custom.tableTradeDetails}
     TABLE_ACCOUNT: ${self:custom.tableAccount}
+    TABLE_ACCOUNT_LOG: ${self:custom.tableAccountLog}
     QUEUE_HARVEST: ${self:custom.queueHarvest}
     QUEUE_STRATEGY: ${self:custom.queueStrategy}
     QUEUE_TRADE: ${self:custom.queueTrade}
@@ -81,6 +82,7 @@ custom:
   tableTradeMeta: tradeMeta-${opt:stage, env:STAGE, "dev"}
   tableTradeDetails: tradeDetails-${opt:stage, env:STAGE, "dev"}
   tableAccount: account-${opt:stage, env:STAGE, "dev"}
+  tableAccountLog: accountLog-${opt:stage, env:STAGE, "dev"}
   queueHarvest: harvest-${opt:stage, env:STAGE, "dev"}
   queueStrategy: strategy-${opt:stage, env:STAGE, "dev"}
   queueTrade: trade-${opt:stage, env:STAGE, "dev"}
@@ -189,6 +191,10 @@ functions:
               - QueueTrade
               - Arn
           batchSize: 10
+  accountLog:
+    handler: cmd/account_log/account_log.account_log
+    events:
+      - schedule: cron(1 0/2 ? * * *) # Every 2nd hour plus 1 minute
 resources:
   Resources:
     TableDiscovery:
@@ -291,6 +297,23 @@ resources:
         KeySchema:
           - AttributeName: account_name
             KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+    TableAccountLog:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.tableAccountLog}
+        AttributeDefinitions:
+          - AttributeName: account_name
+            AttributeType: S
+          - AttributeName: datetime
+            AttributeType: S
+        KeySchema:
+          - AttributeName: account_name
+            KeyType: HASH
+          - AttributeName: datetime
+            KeyType: RANGE
         ProvisionedThroughput:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
