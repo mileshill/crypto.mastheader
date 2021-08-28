@@ -155,16 +155,9 @@ def trade(event, context):
             signals_buy.append(signal)
         if signal.side == "close":
             signals_sell.append(signal)
-    print("PreProcessing")
-    print("BUY: ", signals_buy)
-    print("SELL: ", signals_sell)
 
     signals_sell = process_signals_sell(account, signals_sell)
     signals_buy = process_signals_buy(account, signals_buy)
-
-    print("PostProcessing")
-    print("BUY: ", signals_buy)
-    print("SELL: ", signals_sell)
 
     # Clear the Trade Queue
     for record in event["Records"]:
@@ -174,7 +167,7 @@ def trade(event, context):
     # Push orders to monitoring so the balances can be updated
     for trade_detail in chain(signals_sell, signals_buy):
         SQSMonitor.send_message({
-            "DelaySeconds": 900,
+            "DelaySeconds": 1,
             "MessageBody": trade_detail["slug"],
             "MessageAttributes": {
                 key: {

@@ -191,6 +191,15 @@ functions:
               - QueueTrade
               - Arn
           batchSize: 10
+  monitor:
+    handler: cmd/monitor/monitor.monitor
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - QueueMonitor
+              - Arn
+          batchSize: 1
   accountLog:
     handler: cmd/account_log/account_log.account_log
     events:
