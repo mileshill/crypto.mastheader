@@ -28,6 +28,11 @@ class KuCoinAcct:
         self.current_usdt = float(current_usdt[self.currency])  # Set on object to cut down on calls
         return self.current_usdt
 
+class Symbol:
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            self.__setattr__(key, value)
+
 
 class Account:
     def __init__(self, dynamo: boto3.client, tablename: str, key: str, secret: str, api_pass_phrase: str, max_trades: int = 10, name: str = "TRADE"):
@@ -40,6 +45,7 @@ class Account:
         self.api_pass_phrase = api_pass_phrase
 
         self.client = None
+        self.symbols = None
         self.trade_accounts = None
         self.trades_open = None
         self.balance = None
@@ -56,6 +62,7 @@ class Account:
         # Init the KuCoin client.
         # Load trades, total balance, and available balance
         self.client = Client(self.key, self.secret, self.api_pass_phrase)
+        self.symbols = [Symbol(**symbol) for symbol in self.client.get_symbols()]
         self.trade_accounts = self.get_trade_accounts()  # All non-zero trade accounts
         self.trades_open = self.get_trades_open()  # All non-zero trade accounts NOT USDT
         self.balance = self.get_trade_balance_total()  # All trade account balances converted to USDT
@@ -95,6 +102,14 @@ class Account:
         if self.get_open_position_by_symbol(slug): # Prevent rebuy
             return False
         return True
+
+    def get_price_increment_for_symbol(self, ticker_kucoin: str) -> int:
+        for symbol in self.symbols:
+            if symbol.symbol == ticker_kucoin:
+                increment = symbol.priceIncrement # String value "0.0001"
+                num_decimals = increment.split(".")[-1]
+                return len(num_decimals)
+        return 4  # small enough for most all trading pairs (just in case)
 
     def get_trade_accounts(self) -> List[KuCoinAcct]:
         """
@@ -170,11 +185,12 @@ class Account:
         # Make sure a position is not added too
         if any(symbol == acct.currency for acct in self.trade_accounts):
             return
-        print(f"Buy Order: {symbol} Price: {str(price)} Quote: {price / size:.4f}")
+        price_increment = self.get_price_increment_for_symbol(symbol)
+        print(f"Buy Order: {symbol} Price: {str(price)} Quote: {price / size:.6f}")
         order_id = self.client.create_limit_order(
             symbol=symbol,
             side=self.client.SIDE_BUY,
-            price=f"{price:.4f}",
+            price=f"{round(price, price_increment)}",
             size=f"{size:.2f}",
             time_in_force=self.client.TIMEINFORCE_GOOD_TILL_TIME,
             cancel_after=str(3600)  # Cancel after 1 hour
