@@ -120,11 +120,18 @@ def process_signals_buy(account: Account, signals_buy: List[Signal]) -> List[Dic
         )
         # Create the limit order
         print(f"Creating BUY order for {signal.slug}")
-        order_id = account.create_limit_order_buy(
-            symbol=signal.ticker_kucoin,
-            price=price,
-            size=size
-        )
+        try:
+            order_id = account.create_limit_order_buy(
+                symbol=signal.ticker_kucoin,
+                price=price,
+                size=size
+            )
+        except kucoin.exceptions.KucoinAPIException as e:
+            if e.code == "900001":
+                print(f"{signal.slug} Does not exists")
+                continue
+            raise e
+
 
         guid_meta = str(uuid.uuid4())
         trade_details = {
