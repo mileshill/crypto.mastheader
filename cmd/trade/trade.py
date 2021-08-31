@@ -45,7 +45,17 @@ def process_signals_sell(account: Account, signals_sell: List[Signal]) -> List[D
     :return:
     """
     orders = []
+
+    print(f"Open Orders: {account.orders_open_sell}")
     for signal in signals_sell:
+        if signal.slug == "tether":
+            continue
+        # Don't attempt to reprocess open and unfilled sell orders
+        print(f"Signal Ticker Kucoin: {signal.ticker_kucoin}")
+        if signal.ticker_kucoin in account.orders_open_sell:
+            print(f"Order for {signal.ticker_kucoin} already open")
+            continue
+
         # For a signal to be a sell signal, it must meet the following:
         # 1. Show a balance in KuCoin
         # 2. Be represented in the tradeMeta table by the slug
@@ -60,9 +70,17 @@ def process_signals_sell(account: Account, signals_sell: List[Signal]) -> List[D
             print(json.dumps(signal.to_dict(), indent=4))
             continue
 
+        if kucoin_acct.available == 0 and kucoin_acct.holds > 0:
+            print(f"Acct in unfilled trade: {json.dumps(kucoin_acct.to_dict(), indent=4)}")
+
         # Trade shows as open. Time to close!
         # No time limit on closing (yet)
         # TODO: should there be a time-to-expire on closing? Shift to market or adjust price?
+        print(f"SELL: {signal.slug}")
+        print(f"KucoinAcct: ", json.dumps(kucoin_acct.to_dict(), indent=4))
+        print(f"Signal: ", json.dumps(signal.to_dict(), indent=4))
+
+
         order_id = account.create_limit_order_sell(
             symbol=signal.ticker_kucoin,
             price=kucoin_acct.current_usdt,
@@ -79,14 +97,20 @@ def process_signals_sell(account: Account, signals_sell: List[Signal]) -> List[D
         }
         item = DYNAMO.create_item_from_dict(trade_details)
         DYNAMO.strategy_details_create_item(HC.table_trade_details, item)  # Create the closing arg
+        DYNAMO.strategy_meta_delete_item(HC.table_strategy_details, signal.slug)
         orders.append(trade_details)
     return orders
 
 
 def process_signals_buy(account: Account, signals_buy: List[Signal]) -> List[Dict]:
     orders = []
+    open_buy_orders = [item.get("symbol") for item in
+                        account.client.get_orders(account.client.SIDE_BUY, status="active").get("items")]
     for signal in signals_buy:
         if not account.can_trade(signal.slug):
+            continue
+
+        if signal.ticker_kucoin in open_buy_orders:
             continue
         # Account can only trade based on max trades and if that given trade is not yet open
 
@@ -96,15 +120,11 @@ def process_signals_buy(account: Account, signals_buy: List[Signal]) -> List[Dic
         )
         # Create the limit order
         print(f"Creating BUY order for {signal.slug}")
-        try:
-            order_id = account.create_limit_order_buy(
-                symbol=signal.ticker_kucoin,
-                price=price,
-                size=size
-            )
-        except kucoin.exceptions.KucoinAPIException as e:
-            print(e)
-            continue
+        order_id = account.create_limit_order_buy(
+            symbol=signal.ticker_kucoin,
+            price=price,
+            size=size
+        )
 
         guid_meta = str(uuid.uuid4())
         trade_details = {

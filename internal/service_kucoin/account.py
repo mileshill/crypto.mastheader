@@ -51,6 +51,7 @@ class Account:
         self.balance = None
         self.balance_avail = None
         self.position_max = None
+        self.orders_open_sell = None
 
     def init_account(self):
         """
@@ -67,6 +68,7 @@ class Account:
         self.trades_open = self.get_trades_open()  # All non-zero trade accounts NOT USDT
         self.balance = self.get_trade_balance_total()  # All trade account balances converted to USDT
         self.balance_avail = self.get_trade_balance_available()  # Available USDT
+        self.orders_open_sell = self.get_open_sell_orders()
 
         # Make any updates to dynamo
         self.dynamo.account_update(
@@ -77,6 +79,11 @@ class Account:
         )
 
         self.position_max = self.get_position_size_max()
+
+    def get_open_sell_orders(self) -> List[str]:
+        return [
+            item.get("symbol") for item in self.client.get_orders(side=self.client.SIDE_SELL, status="active").get("items")
+        ]
 
     def to_dict(self):
         dict_copy = {**self.__dict__}
@@ -97,7 +104,7 @@ class Account:
         """
         if self.trades_open >= self.trades_max:
             return False
-        if self.balance_avail < 1:
+        if self.balance_avail < self.position_max:
             return False
         if self.get_open_position_by_symbol(slug): # Prevent rebuy
             return False
@@ -110,6 +117,14 @@ class Account:
                 num_decimals = increment.split(".")[-1]
                 return len(num_decimals)
         return 4  # small enough for most all trading pairs (just in case)
+
+    def get_quote_increment_for_symbol(self, ticker_kucoin: str) -> int:
+        for symbol in self.symbols:
+            if symbol.symbol == ticker_kucoin:
+                increment = symbol.quoteIncrement
+                num_decimals = increment.split(".")[-1]
+                return len(num_decimals)
+        return 4
 
     def get_trade_accounts(self) -> List[KuCoinAcct]:
         """
@@ -185,13 +200,14 @@ class Account:
         # Make sure a position is not added too
         if any(symbol == acct.currency for acct in self.trade_accounts):
             return
-        price_increment = self.get_price_increment_for_symbol(symbol)
-        print(f"Buy Order: {symbol} Price: {str(price)} Quote: {price / size:.6f}")
+        increment_price = self.get_price_increment_for_symbol(symbol)
+        increment_quote = self.get_quote_increment_for_symbol(symbol)
+        print(f"Buy Order: {symbol} Price: {str(price)} Quote: {price / size:.6f} Increment: {increment_price}")
         order_id = self.client.create_limit_order(
             symbol=symbol,
             side=self.client.SIDE_BUY,
-            price=f"{round(price, price_increment)}",
-            size=f"{size:.2f}",
+            price=f"{round(price, increment_price)}",
+            size=f"{round(size, increment_quote)}",
             time_in_force=self.client.TIMEINFORCE_GOOD_TILL_TIME,
             cancel_after=str(3600)  # Cancel after 1 hour
         )
@@ -210,11 +226,17 @@ class Account:
         if any(symbol == acct.currency for acct in self.trade_accounts):
             return
 
+        increment_price = self.get_price_increment_for_symbol(symbol)
+        increment_quote = self.get_quote_increment_for_symbol(symbol)
+        try:
+            print(f"SELL Order: {symbol} Price: {str(price)} Quote: {price / size:.6f} Increment: {increment_price}")
+        except ZeroDivisionError:
+            pass
         order_id = self.client.create_limit_order(
             symbol=symbol,
             side=self.client.SIDE_SELL,
-            price=str(price),
-            size=str(size),
+            price=f"{round(price, increment_price)}",
+            size=f"{round(size, increment_quote)}",
             time_in_force=self.client.TIMEINFORCE_GOOD_TILL_CANCELLED,
         )
         return order_id

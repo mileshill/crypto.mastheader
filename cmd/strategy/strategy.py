@@ -13,6 +13,7 @@ import pandas as pd
 
 from internal.config.config import HarvestConfig
 from internal.service_dynamo.dynamo import ServiceDynamo
+from internal.service_kucoin.account import Account
 from internal.service_sns.sns import ServiceSNS
 from internal.service_sqs.sqs import ServiceSQS
 
@@ -110,7 +111,6 @@ def strategy(event, context):
         trade_is_open = DYNAMO.key_exists(tablename=HC.table_strategy_meta, hash_key_type="S", hash_key_value=slug,
                                           hash_key_name="slug")
         should_publish_to_sqs = False
-        sns_message = {"Subject": "", "Message": ""}
         if trade_action == TradeAction.OPEN and not trade_is_open:
             should_publish_to_sqs = True
 
@@ -127,10 +127,7 @@ def strategy(event, context):
             DYNAMO.strategy_details_create_item(HC.table_strategy_details, item)
             DYNAMO.strategy_meta_create_item(HC.table_strategy_meta, item)
 
-            sns_message = {
-                "Subject": f"{slug} - {trade_action.value}",
-                "Message": json.dumps(trade_conditions, indent=4)
-            }
+
         if trade_action == TradeAction.CLOSE and trade_is_open:
             should_publish_to_sqs = True
             # Get the guid
@@ -145,12 +142,6 @@ def strategy(event, context):
             # Update the databases tables
             item = DYNAMO.create_item_from_dict(trade_conditions)
             DYNAMO.strategy_details_create_item(HC.table_strategy_details, item)
-            DYNAMO.strategy_meta_delete_item(HC.table_strategy_meta, slug)
-
-            sns_message = {
-                "Subject": f"{slug} - {trade_action.value}",
-                "Message": json.dumps(trade_conditions, indent=4)
-            }
 
         if should_publish_to_sqs:
             SQS.send_message({

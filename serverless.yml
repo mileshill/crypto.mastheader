@@ -97,7 +97,7 @@ custom:
   strategyDAAEnter: 0.11
   strategyDAAExit: -0.45
   strategySMALookback: 1
-  strategyMaxTrades: 10
+  strategyMaxTrades: 5
   strategyVolatilityEnter: 1.15
   strategyVolatilityExit: 1.72
   kucoinKey: ${env:KUCOIN_KEY}
@@ -159,7 +159,7 @@ functions:
   harvestPrimer:
     handler: cmd/harvest/primer.primer
     events:
-      - schedule: cron(1 0/4 ? * * *) # 01:00 UTC  (Midnight + 1 min) every day
+      - schedule: cron(1 0/2 ? * * *) # 01:00 UTC  (Midnight + 1 min) every day
   # Harvest Executor queries Santiment to get the latest metrics on each of the trading pairs
   harvestExecutor:
     handler: cmd/harvest/executor.executor
