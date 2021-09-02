@@ -2,11 +2,9 @@
 account.py
 Implements the basic account computations required create trades.
 """
-import json
 from typing import List, Union, Tuple, Dict
 
 import boto3
-import kucoin.exceptions
 from kucoin.client import Client
 
 
@@ -28,6 +26,7 @@ class KuCoinAcct:
         self.current_usdt = float(current_usdt[self.currency])  # Set on object to cut down on calls
         return self.current_usdt
 
+
 class Symbol:
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
@@ -35,7 +34,8 @@ class Symbol:
 
 
 class Account:
-    def __init__(self, dynamo: boto3.client, tablename: str, key: str, secret: str, api_pass_phrase: str, max_trades: int = 10, name: str = "TRADE"):
+    def __init__(self, dynamo: boto3.client, tablename: str, key: str, secret: str, api_pass_phrase: str,
+                 max_trades: int = 10, name: str = "TRADE"):
         self.dynamo = dynamo
         self.tablename = tablename
         self.trades_max = max_trades
@@ -82,7 +82,8 @@ class Account:
 
     def get_open_sell_orders(self) -> List[str]:
         return [
-            item.get("symbol") for item in self.client.get_orders(side=self.client.SIDE_SELL, status="active").get("items")
+            item.get("symbol") for item in
+            self.client.get_orders(side=self.client.SIDE_SELL, status="active").get("items")
         ]
 
     def to_dict(self):
@@ -95,7 +96,7 @@ class Account:
         dict_copy["trade_accounts"] = [a.to_dict() for a in trade_accounts]
         return dict_copy
 
-    def can_trade(self, slug:str) -> bool:
+    def can_trade(self, slug: str) -> bool:
         """
         If trades_open < trades_max and there is balance_available True else False
         Assume at least 1 USDT is available for trade.
@@ -106,16 +107,16 @@ class Account:
             return False
         if self.balance_avail < self.position_max:
             return False
-        if self.get_open_position_by_symbol(slug): # Prevent rebuy
+        if self.get_open_position_by_symbol(slug):  # Prevent rebuy
             return False
         return True
 
     def get_price_increment_for_symbol(self, ticker_kucoin: str) -> int:
         for symbol in self.symbols:
             if symbol.symbol == ticker_kucoin:
-                increment = symbol.priceIncrement # String value "0.0001"
+                increment = symbol.priceIncrement  # String value "0.0001"
                 num_decimals = increment.split(".")[-1]
-                return len(num_decimals)
+                return len(num_decimals) - 1
         return 4  # small enough for most all trading pairs (just in case)
 
     def get_quote_increment_for_symbol(self, ticker_kucoin: str) -> int:
@@ -123,7 +124,7 @@ class Account:
             if symbol.symbol == ticker_kucoin:
                 increment = symbol.quoteIncrement
                 num_decimals = increment.split(".")[-1]
-                return len(num_decimals)
+                return len(num_decimals) - 1
         return 4
 
     def get_trade_accounts(self) -> List[KuCoinAcct]:
@@ -202,7 +203,8 @@ class Account:
             return
         increment_price = self.get_price_increment_for_symbol(symbol)
         increment_quote = self.get_quote_increment_for_symbol(symbol)
-        print(f"Buy Order: {symbol} Price: {str(price)} Quote: {price / size:.6f} Increment: {increment_price}")
+        print(
+            f"Buy Order: {symbol} Price: {round(price, increment_price)} Size: {price / size:.6f} Increment: {increment_price}, PriceIncrement: {round(price, increment_price)}")
         order_id = self.client.create_limit_order(
             symbol=symbol,
             side=self.client.SIDE_BUY,
@@ -248,6 +250,9 @@ class Account:
         return
 
     def get_position_size_max(self):
-        return self.dynamo.account_get_max_position_size(
+        size_max = self.dynamo.account_get_max_position_size(
             self.tablename, self.name
         )
+
+    def get_order(self, order_id: str) -> Dict:
+        return self.client.get_order(order_id)

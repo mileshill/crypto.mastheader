@@ -107,6 +107,7 @@ def process_signals_buy(account: Account, signals_buy: List[Signal]) -> List[Dic
     open_buy_orders = [item.get("symbol") for item in
                         account.client.get_orders(account.client.SIDE_BUY, status="active").get("items")]
     for signal in signals_buy:
+        account.init_account()
         if not account.can_trade(signal.slug):
             continue
 
@@ -169,6 +170,7 @@ def trade(event, context):
         name="TRADE"
     )
     account.init_account()  # Calls to Kucoin to get current value
+    print(f"Account available balance: {account.balance_avail}")
     # Might be the first time seeing the account
 
     # Event Records are coming in maximum of 10 batches.

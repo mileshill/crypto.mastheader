@@ -5,7 +5,6 @@ a trade action. If a trade action should be made, publish to an SNS topic, else,
 """
 import datetime
 import enum
-import json
 import uuid
 from typing import Dict
 
@@ -13,14 +12,13 @@ import pandas as pd
 
 from internal.config.config import HarvestConfig
 from internal.service_dynamo.dynamo import ServiceDynamo
-from internal.service_kucoin.account import Account
-from internal.service_sns.sns import ServiceSNS
 from internal.service_sqs.sqs import ServiceSQS
 
 HC = HarvestConfig()
 DYNAMO = ServiceDynamo()
 SQS = ServiceSQS(HC.queue_trade)
-
+SQSTradeBuy = ServiceSQS(HC.queue_trade_buy)
+SQSTradeSell = ServiceSQS(HC.queue_trade_sell)
 
 
 class TradeAction(enum.Enum):
@@ -78,6 +76,10 @@ def get_trade_action(row: Dict) -> TradeAction:
 
 
 def strategy(event, context):
+    # Contianers for SQS events used in batch publishing
+    actions_buy = list()
+    actions_sell = list()
+
     for record in event["Records"]:
         slug = record["body"]
         ticker = record["messageAttributes"]["ticker"]["stringValue"]
@@ -107,60 +109,63 @@ def strategy(event, context):
             print(f"Slug({slug}) - No trade actions")
             return
 
-        # Trade Open
-        trade_is_open = DYNAMO.key_exists(tablename=HC.table_strategy_meta, hash_key_type="S", hash_key_value=slug,
-                                          hash_key_name="slug")
-        should_publish_to_sqs = False
-        if trade_action == TradeAction.OPEN and not trade_is_open:
-            should_publish_to_sqs = True
+        # Create the StrategyDetails entry
+        guid_meta = str(uuid.uuid4())
+        guid_details = f"{guid_meta}#{trade_action.value}"
+        trade_conditions["datetime_proposed"] = datetime.datetime.utcnow().strftime(HC.time_format)
+        trade_conditions["action"] = trade_action.value
+        trade_conditions["guid_meta"] = guid_meta
+        trade_conditions["guid_details"] = guid_details
 
-            # Update the conditions
-            guid_meta = str(uuid.uuid4())
-            guid_details = f"{guid_meta}#{trade_action.value}"
-            trade_conditions["datetime_proposed"] = datetime.datetime.utcnow().strftime(HC.time_format)
-            trade_conditions["action"] = trade_action.value
-            trade_conditions["guid_meta"] = guid_meta
-            trade_conditions["guid_details"] = guid_details
+        # Update the databases tables
+        item = DYNAMO.create_item_from_dict(trade_conditions)
+        DYNAMO.strategy_details_create_item(HC.table_strategy_details, item)
 
-            # Update the databases tables
-            item = DYNAMO.create_item_from_dict(trade_conditions)
-            DYNAMO.strategy_details_create_item(HC.table_strategy_details, item)
-            DYNAMO.strategy_meta_create_item(HC.table_strategy_meta, item)
+        # Message to transmit
+        sqs_message = create_sqs_message(
+            delay_seconds=0,
+            message_body=slug,
+            trade_action=trade_action.value,
+            ticker=ticker,
+            guid_details=guid_details
+        )
 
+        if trade_action == TradeAction.OPEN:
+            actions_buy.append(sqs_message)
+        if trade_action == TradeAction.CLOSE:
+            actions_sell.append(sqs_message)
 
-        if trade_action == TradeAction.CLOSE and trade_is_open:
-            should_publish_to_sqs = True
-            # Get the guid
-
-            guid_meta = DYNAMO.strategy_meta_get_item(HC.table_strategy_meta, slug)
-            guid_details = f"{guid_meta}#{trade_action.value}"
-            trade_conditions["datetime_proposed"] = datetime.datetime.utcnow().strftime(HC.time_format)
-            trade_conditions["action"] = trade_action.value
-            trade_conditions["guid_meta"] = guid_meta
-            trade_conditions["guid_details"] = guid_details
-
-            # Update the databases tables
-            item = DYNAMO.create_item_from_dict(trade_conditions)
-            DYNAMO.strategy_details_create_item(HC.table_strategy_details, item)
-
-        if should_publish_to_sqs:
-            SQS.send_message({
-                "DelaySeconds": 0,
-                "MessageBody": slug,
-                "MessageAttributes": {
-                    "side": {
-                        "StringValue":  trade_action.value,
-                        "DataType": "String"
-                    },
-                    "ticker": {
-                        "StringValue": ticker,
-                        "DataType": "String"
-                    },
-                    "strategy_guid": {
-                        "StringValue": guid_meta,
-                        "DataType": "String"
-                    }
-                }
-            })
+    SQSTradeSell.send_in_batches(actions_sell)
+    SQSTradeBuy.send_in_batches(actions_buy)
 
 
+def create_sqs_message(delay_seconds: int, message_body: str, trade_action: str, ticker: str,
+                       guid_details: str) -> Dict:
+    """
+    Creates a dict in the format required by SQS to send messages in batches
+    :param delay_seconds:
+    :param message_body:
+    :param trade_action:
+    :param ticker:
+    :param guid_details:
+    :return:
+    """
+    return {
+        "Id": guid_details,
+        "DelaySeconds": delay_seconds,
+        "MessageBody": message_body,  # Should be the `slug`
+        "MessageAttributes": {
+            "side": {
+                "StringValue": trade_action,  # trade_action.value to get str of enum
+                "DataType": "String"
+            },
+            "ticker": {
+                "StringValue": ticker,
+                "DataType": "String"
+            },
+            "strategy_guid": {
+                "StringValue": guid_details,
+                "DataType": "String"
+            }
+        }
+    }

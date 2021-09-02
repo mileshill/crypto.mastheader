@@ -2,7 +2,7 @@
 sqs.py
 """
 import boto3
-from typing import Dict
+from typing import Dict, List
 
 
 class ServiceSQS:
@@ -23,6 +23,16 @@ class ServiceSQS:
             **payload
         )
         return response["MessageId"]
+
+    def send_in_batches(self, messages: List[Dict]) -> None:
+        max_batch_size = 10
+        for i in range(0, len(messages), max_batch_size):
+            batch = messages[i: i + max_batch_size]
+            self.client.send_message_batch(
+                QueueUrl=self.queue_url,
+                Entries=batch
+            )
+        return
 
     def delete_message(self, receipt_handle: str):
         self.client.delete_message(

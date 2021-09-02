@@ -27,9 +27,12 @@ provider:
     TABLE_TRADE_DETAILS: ${self:custom.tableTradeDetails}
     TABLE_ACCOUNT: ${self:custom.tableAccount}
     TABLE_ACCOUNT_LOG: ${self:custom.tableAccountLog}
+    TABLE_ORDERS: ${self:custom.tableOrders}
     QUEUE_HARVEST: ${self:custom.queueHarvest}
     QUEUE_STRATEGY: ${self:custom.queueStrategy}
     QUEUE_TRADE: ${self:custom.queueTrade}
+    QUEUE_TRADE_BUY: ${self:custom.queueTradeBuy}
+    QUEUE_TRADE_SELL: ${self:custom.queueTradeSell}
     QUEUE_MONITOR: ${self:custom.queueMonitor}
     SNS_TOPIC_DISCOVERY: ${self:custom.snsTopicDiscovery}
     SNS_TOPIC_STRATEGY: ${self:custom.snsTopicStrategy}
@@ -83,9 +86,12 @@ custom:
   tableTradeDetails: tradeDetails-${opt:stage, env:STAGE, "dev"}
   tableAccount: account-${opt:stage, env:STAGE, "dev"}
   tableAccountLog: accountLog-${opt:stage, env:STAGE, "dev"}
+  tableOrders: orders-${opt:stage, env:STAGE, "dev"}
   queueHarvest: harvest-${opt:stage, env:STAGE, "dev"}
   queueStrategy: strategy-${opt:stage, env:STAGE, "dev"}
   queueTrade: trade-${opt:stage, env:STAGE, "dev"}
+  queueTradeBuy: tradeBuy-${opt:stage, env:STAGE, "dev"}
+  queueTradeSell: tradeSell-${opt:stage, env:STAGE, "dev"}
   queueMonitor: monitor-${opt:stage, env:STAGE, "dev"}
   sesSender: crypto.mastheader@gmail.com
   sesRecipient: crypto.mastheader@gmail.com
@@ -97,7 +103,7 @@ custom:
   strategyDAAEnter: 0.11
   strategyDAAExit: -0.45
   strategySMALookback: 1
-  strategyMaxTrades: 5
+  strategyMaxTrades: 6
   strategyVolatilityEnter: 1.15
   strategyVolatilityExit: 1.72
   kucoinKey: ${env:KUCOIN_KEY}
@@ -111,6 +117,15 @@ custom:
   # Capacity configures the autoscaling features of Dynamo
   capacities:
     - table: TableHarvest
+      read:
+        minimum: 1
+        maximum: 500
+        usage: 0.75
+      write:
+        minimum: 1
+        maximum: 10000
+        usage: 0.75
+    - table: TableOrders
       read:
         minimum: 1
         maximum: 500
@@ -326,6 +341,23 @@ resources:
         ProvisionedThroughput:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
+    TableOrders:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.tableOrders}
+        AttributeDefinitions:
+          - AttributeName: slug
+            AttributeType: S
+          - AttributeName: order_id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: slug
+            KeyType: HASH
+          - AttributeName: id
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
     QueueHarvest:
       Type: AWS::SQS::Queue
       Properties:
@@ -340,6 +372,16 @@ resources:
       Type: AWS::SQS::Queue
       Properties:
         QueueName: ${self:custom.queueTrade}
+        VisibilityTimeout: 240
+    QueueTradeBuy:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:custom.queueTradeBuy}
+        VisibilityTimeout: 240
+    QueueTradeSell:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:custom.queueTradeSell}
         VisibilityTimeout: 240
     QueueMonitor:
       Type: AWS::SQS::Queue
