@@ -96,7 +96,7 @@ class Account:
         dict_copy["trade_accounts"] = [a.to_dict() for a in trade_accounts]
         return dict_copy
 
-    def can_trade(self, slug: str) -> bool:
+    def can_trade(self) -> bool:
         """
         If trades_open < trades_max and there is balance_available True else False
         Assume at least 1 USDT is available for trade.
@@ -105,9 +105,7 @@ class Account:
         """
         if self.trades_open >= self.trades_max:
             return False
-        if self.balance_avail < self.position_max:
-            return False
-        if self.get_open_position_by_symbol(slug):  # Prevent rebuy
+        if self.balance_avail <= 1:
             return False
         return True
 
@@ -135,7 +133,7 @@ class Account:
         """
         return [
             KuCoinAcct(**act) for act in self.client.get_accounts()
-            if ((float(act["balance"]) > 0.0001) and (act["type"] == "trade"))  # Nonzero traiding pairs
+            if ((float(act["balance"]) > 0.01) and (act["type"] == "trade"))  # Nonzero traiding pairs
                or ((act["currency"] == "USDT") and (act["type"] == "trade"))  # Just USDT
         ]
 
@@ -204,7 +202,7 @@ class Account:
         increment_price = self.get_price_increment_for_symbol(symbol)
         increment_quote = self.get_quote_increment_for_symbol(symbol)
         print(
-            f"Buy Order: {symbol} Price: {round(price, increment_price)} Size: {price / size:.6f} Increment: {increment_price}, PriceIncrement: {round(price, increment_price)}")
+            f"Buy Order: {symbol} Price: {round(price, increment_price)} Size: {round(size, increment_quote)}")
         order_id = self.client.create_limit_order(
             symbol=symbol,
             side=self.client.SIDE_BUY,
@@ -250,9 +248,22 @@ class Account:
         return
 
     def get_position_size_max(self):
-        size_max = self.dynamo.account_get_max_position_size(
+        max_size_allowed = self.dynamo.account_get_max_position_size(
             self.tablename, self.name
         )
+        return int(min(self.balance_avail, max_size_allowed))
 
     def get_order(self, order_id: str) -> Dict:
         return self.client.get_order(order_id)
+
+    def has_active_buy_order_for_symbol(self, symbol: str) -> bool:
+        if "-USDT" not in symbol:
+            symbol = f"{symbol}-USDT"
+
+        items = self.client.get_orders(
+            side=self.client.SIDE_BUY,
+            symbol=symbol,
+            status="active"
+        ).get("items")
+        return bool(items)
+

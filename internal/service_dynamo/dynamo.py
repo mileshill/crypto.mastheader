@@ -207,7 +207,6 @@ class ServiceDynamo:
                 "account_name": {"S": account_name}
             }
         )
-        print(f"Response: account_get_max_position_size: {resp}")
         position_max = float(resp["Item"]["position_max"]["N"])
         balance_avail = float(resp["Item"]["balance_avail"]["N"])
         return min(position_max, balance_avail)

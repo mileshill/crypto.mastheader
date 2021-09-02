@@ -197,13 +197,31 @@ functions:
               - QueueStrategy
               - Arn
           batchSize: 1
-  trade:
-    handler: cmd/trade/trade.trade
+#  trade:
+#    handler: cmd/trade/trade.trade
+#    events:
+#      - sqs:
+#          arn:
+#            Fn::GetAtt:
+#              - QueueTrade
+#              - Arn
+#          batchSize: 10
+  tradeBuy:
+    handler: cmd/trade/trade_buy.trade_buy
     events:
       - sqs:
           arn:
             Fn::GetAtt:
-              - QueueTrade
+              - QueueTradeBuy
+              - Arn
+          batchSize: 10
+  tradeSell:
+    handler: cmd/trade/trade_sell.trade_sell
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - QueueTradeSell
               - Arn
           batchSize: 10
   monitor:
@@ -348,7 +366,7 @@ resources:
         AttributeDefinitions:
           - AttributeName: slug
             AttributeType: S
-          - AttributeName: order_id
+          - AttributeName: id
             AttributeType: S
         KeySchema:
           - AttributeName: slug

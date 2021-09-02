@@ -151,7 +151,7 @@ def create_sqs_message(delay_seconds: int, message_body: str, trade_action: str,
     :return:
     """
     return {
-        "Id": guid_details,
+        "Id": str(uuid.uuid4()),
         "DelaySeconds": delay_seconds,
         "MessageBody": message_body,  # Should be the `slug`
         "MessageAttributes": {

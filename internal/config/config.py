@@ -17,7 +17,7 @@ class HarvestConfig:
         self.table_account_log = os.getenv("TABLE_ACCOUNT_LOG", None)
         self.table_trade_meta = os.getenv("TABLE_TRADE_META", None)
         self.table_trade_details = os.getenv("TABLE_TRADE_DETAILS", None)
-        self.table_trade_orders = os.getenv("TABLE_TRADE_ORDERS", None)
+        self.table_orders = os.getenv("TABLE_ORDERS", None)
         self.queue_harvest = os.getenv("QUEUE_HARVEST", None)
         self.queue_strategy = os.getenv("QUEUE_STRATEGY", None)
         self.queue_trade = os.getenv("QUEUE_TRADE", None)
