@@ -78,7 +78,7 @@ class Account:
             position_max=(self.balance / self.trades_max)
         )
 
-        self.position_max = self.get_position_size_max()
+        self.position_max = int(self.balance / self.trades_max)
 
     def get_open_sell_orders(self) -> List[str]:
         return [
@@ -105,7 +105,7 @@ class Account:
         """
         if self.trades_open >= self.trades_max:
             return False
-        if self.balance_avail <= 1:
+        if self.balance_avail < self.position_max * 0.5:
             return False
         return True
 
@@ -174,7 +174,7 @@ class Account:
         Any account where the curreny is not USDT
         :return:
         """
-        return sum(1 for acct in self.trade_accounts if acct.currency != "USDT")
+        return sum(1 for acct in self.trade_accounts if acct.currency not in ["USDT", "KCS"])
 
     def compute_price_and_size(self, symbol: str, position_size: float) -> Tuple[float, float]:
         """
@@ -248,10 +248,10 @@ class Account:
         return
 
     def get_position_size_max(self):
-        max_size_allowed = self.dynamo.account_get_max_position_size(
+        position_max_from_db = self.dynamo.account_get_max_position_size(
             self.tablename, self.name
         )
-        return int(min(self.balance_avail, max_size_allowed))
+        return min(position_max_from_db, self.balance_avail)
 
     def get_order(self, order_id: str) -> Dict:
         return self.client.get_order(order_id)

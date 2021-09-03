@@ -207,9 +207,7 @@ class ServiceDynamo:
                 "account_name": {"S": account_name}
             }
         )
-        position_max = float(resp["Item"]["position_max"]["N"])
-        balance_avail = float(resp["Item"]["balance_avail"]["N"])
-        return min(position_max, balance_avail)
+        return float(resp["Item"]["position_max"]["N"])
 
     def account_set_max_position_size(self, tablename: str, position_size: float, account_name: str = "TRADE"):
         resp = self.client.update_item(

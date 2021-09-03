@@ -22,10 +22,10 @@ ACCOUNT = Account(
     max_trades=HC.strategy_max_trades,
     name="TRADE"
 )
-ACCOUNT.init_account()  # Calls to Kucoin to get current value
 
 
 def trade_buy(event, context):
+    ACCOUNT.init_account()  # Calls to Kucoin to get current value
     strategy_signals = {
         record["messageAttributes"]["ticker"]["stringValue"]: SignalStrategy(record) for record in event["Records"]
     }
@@ -45,7 +45,7 @@ def trade_buy(event, context):
 
         # No open position. No active orders. But account is maxed on trades or not enough balance
         if not ACCOUNT.can_trade():
-            print(f"Account cannot trade: NumOpenTrades: {ACCOUNT.trades_open} BalanceAvail: {ACCOUNT.balance_avail}")
+            print(f"Account cannot trade: NumOpenTrades: {ACCOUNT.trades_open} BalanceAvail: {ACCOUNT.balance_avail} Position Max: {ACCOUNT.position_max}")
             continue
 
         # Finally. Time to create a buy order

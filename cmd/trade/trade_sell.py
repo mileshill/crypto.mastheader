@@ -22,7 +22,6 @@ ACCOUNT = Account(
     max_trades=HC.strategy_max_trades,
     name="TRADE"
 )
-ACCOUNT.init_account()  # Calls to Kucoin to get current value
 
 
 def trade_sell(event, context):
@@ -32,7 +31,7 @@ def trade_sell(event, context):
     :param context:
     :return:
     """
-
+    ACCOUNT.init_account()  # Calls to Kucoin to get current value
     # Create a dict for easy processing: { ticker: Signal, ...} -> { FRONT: Signal, XRP: Signal, Theta: Signal, ...}
     # Processes in batches
     strategy_signals = {
@@ -64,13 +63,14 @@ def trade_sell(event, context):
                 Order(
                     order_id=order_id.get("orderId"),
                     slug=strategy_signals[kucoin_account.currency].slug,
-                    strategy_guid=strategy_signals[kucoin_account].strategy_guid
+                    strategy_guid=strategy_signals[kucoin_account.currency].strategy_guid
                 )
             )
         except kucoin.exceptions.KucoinAPIException as e:
             if e.code == "900001":
-                print(f"{strategy_signals[kucoin_account.currency].slug}-USDT not exits")
+                print(f"{strategy_signals[kucoin_account.currency].slug}-USDT not exist")
                 print(e)
+                continue
             raise e
     # For each order, get the order details and write to a dynamo table
     for order in orders:
