@@ -19,7 +19,9 @@ def trade_sell(event, context):
     :param context:
     :return:
     """
-    ACCOUNT.init_account()  # Calls to Kucoin to get current value
+    if ACCOUNT.trade_accounts is None:
+        ACCOUNT.init_account()  # Calls to Kucoin to get current value
+
     # Create a dict for easy processing: { ticker: Signal, ...} -> { FRONT: Signal, XRP: Signal, Theta: Signal, ...}
     # Processes in batches
     strategy_signals = {
