@@ -20,7 +20,7 @@ class HarvestConfig:
         self.table_orders = os.getenv("TABLE_ORDERS", None)
         self.queue_harvest = os.getenv("QUEUE_HARVEST", None)
         self.queue_strategy = os.getenv("QUEUE_STRATEGY", None)
-        self.queue_trade = os.getenv("QUEUE_TRADE", None)
+        #self.queue_trade = os.getenv("QUEUE_TRADE", None)
         self.queue_trade_buy = os.getenv("QUEUE_TRADE_BUY", None)
         self.queue_trade_sell = os.getenv("QUEUE_TRADE_SELL", None)
         self.queue_monitor = os.getenv("QUEUE_MONITOR", None)

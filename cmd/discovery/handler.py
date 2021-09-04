@@ -85,6 +85,7 @@ def discovery(event, context):
     data = pd.merge(santiment_pairs, kucoin_pairs, how="inner", left_on="ticker", right_on="ticker")
     data["totalSupply"] = data["totalSupply"].fillna(0)
     data = data.astype(str)
+    data = data[data["marketSegment"] != "Stablecoin"]
 
     # Update the Discovery table with non existent pairs
     new_slugs = list()

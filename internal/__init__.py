@@ -1,8 +1,8 @@
-from config.config import HarvestConfig
-from service_dynamo.dynamo import ServiceDynamo
-from service_kucoin.account import Account
-from service_ses.ses import ServiceSES
-from service_sns.sns import ServiceSNS
+from .config.config import HarvestConfig
+from .service_dynamo.dynamo import ServiceDynamo
+from .service_kucoin.account import Account
+from .service_ses.ses import ServiceSES
+from .service_sns.sns import ServiceSNS
 
 HC = HarvestConfig()
 DYNAMO = ServiceDynamo()

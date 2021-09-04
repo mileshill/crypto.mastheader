@@ -10,7 +10,14 @@ app: crypto-ixian-bot
 
 frameworkVersion: '2'
 
+package:
+  patterns:
+    - "!node_modules/**"
+    - "!.git/**"
+    - "!scripts/**"
+
 provider:
+  lambdaHashingVersion: 20201221
   name: aws
   runtime: python3.9
   stage: ${opt:stage, env:STAGE, "dev"}
@@ -30,7 +37,7 @@ provider:
     TABLE_ORDERS: ${self:custom.tableOrders}
     QUEUE_HARVEST: ${self:custom.queueHarvest}
     QUEUE_STRATEGY: ${self:custom.queueStrategy}
-    QUEUE_TRADE: ${self:custom.queueTrade}
+    #QUEUE_TRADE: ${self:custom.queueTrade}
     QUEUE_TRADE_BUY: ${self:custom.queueTradeBuy}
     QUEUE_TRADE_SELL: ${self:custom.queueTradeSell}
     QUEUE_MONITOR: ${self:custom.queueMonitor}
@@ -89,7 +96,7 @@ custom:
   tableOrders: orders-${opt:stage, env:STAGE, "dev"}
   queueHarvest: harvest-${opt:stage, env:STAGE, "dev"}
   queueStrategy: strategy-${opt:stage, env:STAGE, "dev"}
-  queueTrade: trade-${opt:stage, env:STAGE, "dev"}
+  #queueTrade: trade-${opt:stage, env:STAGE, "dev"}
   queueTradeBuy: tradeBuy-${opt:stage, env:STAGE, "dev"}
   queueTradeSell: tradeSell-${opt:stage, env:STAGE, "dev"}
   queueMonitor: monitor-${opt:stage, env:STAGE, "dev"}
@@ -114,11 +121,11 @@ custom:
   prune:
     automatic: true
     number: 2
-#  pythonRequirements:
-#    slim: true
-#    useStaticCache: false
-#    useDownloadCache: false
-#    layer: true
+  pythonRequirements:
+    #slim: true
+    useStaticCache: false
+    useDownloadCache: false
+    #layer: true
   # Capacity configures the autoscaling features of Dynamo
   capacities:
     - table: TableHarvest
@@ -391,11 +398,11 @@ resources:
       Properties:
         QueueName: ${self:custom.queueStrategy}
         VisibilityTimeout: 240
-    QueueTrade:
-      Type: AWS::SQS::Queue
-      Properties:
-        QueueName: ${self:custom.queueTrade}
-        VisibilityTimeout: 240
+#    QueueTrade:
+#      Type: AWS::SQS::Queue
+#      Properties:
+#        QueueName: ${self:custom.queueTrade}
+#        VisibilityTimeout: 240
     QueueTradeBuy:
       Type: AWS::SQS::Queue
       Properties:
