@@ -1,8 +1,6 @@
 import datetime
 import http
 import json
-import os
-from typing import Dict, List
 
 import pandas as pd
 import requests
@@ -10,19 +8,6 @@ import san
 
 from internal import HC, DYNAMO, SNS, SES
 from internal.service_ses.ses import Email
-
-
-def load_env_vars(vars_required: List[str]) -> Dict[str, str]:
-    """
-    Loads required env vars
-    :return:
-        dict of string or error
-    """
-    # Load
-    return {
-        var: os.getenv(var)
-        for var in vars_required
-    }
 
 
 def santiment_init(key: str) -> None:
@@ -59,7 +44,6 @@ def discovery(event, context):
         None or Error
     """
     santiment_init(HC.santiment_key)
-
 
     # Handle bad response from Kucoin
     response = requests.get(HC.kucoin_url_alltickers)
