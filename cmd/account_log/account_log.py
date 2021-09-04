@@ -8,31 +8,19 @@ Collects:
 """
 import datetime
 
-from internal.config.config import HarvestConfig
-from internal.service_dynamo.dynamo import ServiceDynamo
-from internal.service_kucoin.account import Account
-
-HC = HarvestConfig()
-DYNAMO = ServiceDynamo()
+from internal import HC, DYNAMO, ACCOUNT
 
 
 def account_log(event, context):
     # Default account initialization
-    account = Account(
-        dynamo=DYNAMO, tablename=HC.table_account,
-        key=HC.kucoin_key, secret=HC.kucoin_secret, api_pass_phrase=HC.kucoin_api_passphrase,
-        max_trades=HC.strategy_max_trades,
-        name="TRADE"
-    )
-    account.init_account()  # Makes the calls to Kucoin
-
+    ACCOUNT.init_account()
     # Desire info
     details = {
-        "account_name": account.name,
-        "balance": account.balance,
-        "balance_avail": account.balance_avail,
-        "position_max": account.position_max,
-        "trades_open": account.trades_open,
+        "account_name": ACCOUNT.name,
+        "balance": ACCOUNT.balance,
+        "balance_avail": ACCOUNT.balance_avail,
+        "position_max": ACCOUNT.position_max,
+        "trades_open": ACCOUNT.trades_open,
         "datetime": datetime.datetime.utcnow().strftime(HC.time_format)
     }
 

@@ -13,16 +13,11 @@ from typing import Dict
 import pandas as pd
 import san
 
-from internal.config.config import HarvestConfig
-from internal.service_dynamo.dynamo import ServiceDynamo
+from internal import HC, DYNAMO
 from internal.service_sqs.sqs import ServiceSQS
-from internal.service_sns.sns import ServiceSNS
 
-HC = HarvestConfig()
-DYNAMO = ServiceDynamo()
 SQSHarvest = ServiceSQS(HC.queue_harvest)
 SQSStrategy = ServiceSQS(HC.queue_strategy)
-SNS = ServiceSNS()
 san.ApiConfig.api_key = HC.santiment_key
 
 

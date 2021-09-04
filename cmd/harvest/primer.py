@@ -10,17 +10,13 @@ For each pair in the table:
 import http
 import json
 
-from internal.config.config import HarvestConfig
-from internal.service_dynamo.dynamo import ServiceDynamo
+from internal import HC, DYNAMO
 from internal.service_sqs.sqs import ServiceSQS
 
-HC = HarvestConfig()
-DYNAMO = ServiceDynamo()
 SQS = ServiceSQS(HC.queue_harvest)
 
 
 def primer(event, context):
-
     # Scan the dynamo table for pairs and last_udpated
     # Create SQS Items for each of the pairs
     all_tickers = DYNAMO.discovery_scan(HC.table_discovery)

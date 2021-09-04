@@ -10,13 +10,9 @@ from typing import Dict
 
 import pandas as pd
 
-from internal.config.config import HarvestConfig
-from internal.service_dynamo.dynamo import ServiceDynamo
+from internal import HC, DYNAMO
 from internal.service_sqs.sqs import ServiceSQS
 
-HC = HarvestConfig()
-DYNAMO = ServiceDynamo()
-SQS = ServiceSQS(HC.queue_trade)
 SQSTradeBuy = ServiceSQS(HC.queue_trade_buy)
 SQSTradeSell = ServiceSQS(HC.queue_trade_sell)
 

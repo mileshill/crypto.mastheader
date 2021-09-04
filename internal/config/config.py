@@ -11,12 +11,12 @@ class HarvestConfig:
         self.santiment_key = os.getenv("SANTIMENT_KEY", None)
         self.table_discovery = os.getenv("TABLE_DISCOVERY", None)
         self.table_harvest = os.getenv("TABLE_HARVEST", None)
-        self.table_strategy_meta = os.getenv("TABLE_STRATEGY_META", None)
+        # self.table_strategy_meta = os.getenv("TABLE_STRATEGY_META", None)
         self.table_strategy_details = os.getenv("TABLE_STRATEGY_DETAILS", None)
         self.table_account = os.getenv("TABLE_ACCOUNT", None)
         self.table_account_log = os.getenv("TABLE_ACCOUNT_LOG", None)
-        self.table_trade_meta = os.getenv("TABLE_TRADE_META", None)
-        self.table_trade_details = os.getenv("TABLE_TRADE_DETAILS", None)
+        # self.table_trade_meta = os.getenv("TABLE_TRADE_META", None)
+        # self.table_trade_details = os.getenv("TABLE_TRADE_DETAILS", None)
         self.table_orders = os.getenv("TABLE_ORDERS", None)
         self.queue_harvest = os.getenv("QUEUE_HARVEST", None)
         self.queue_strategy = os.getenv("QUEUE_STRATEGY", None)
@@ -26,8 +26,8 @@ class HarvestConfig:
         self.queue_monitor = os.getenv("QUEUE_MONITOR", None)
         self.sns_topic_discovery = os.getenv("SNS_TOPIC_DISCOVERY", None)
         self.sns_topic_strategy = os.getenv("SNS_TOPIC_STRATEGY", None)
-        self.sns_sender = os.getenv("SES_SENDER", None)
-        self.sns_recipient = os.getenv("SES_RECIPIENT", None)
+        self.ses_sender = os.getenv("SES_SENDER", None)
+        self.ses_recipient = os.getenv("SES_RECIPIENT", None)
         self.time_format = "%Y-%m-%dT%H:%M:%SZ"
         self.env = os.getenv("ENV", None)
 
@@ -55,5 +55,3 @@ class HarvestConfig:
                 self.__dict__[k] = float(v)
             if v is None:
                 raise Exception(f"Missing env var - key {k} value {v}")
-
-

@@ -8,13 +8,8 @@ import pandas as pd
 import requests
 import san
 
-from internal.service_dynamo.dynamo import ServiceDynamo
-from internal.service_sns.sns import ServiceSNS
-from internal.service_ses.ses import ServiceSES, Email
-
-DYNAMO = ServiceDynamo()
-SNS = ServiceSNS()
-SES = ServiceSES()
+from internal import HC, DYNAMO, SNS, SES
+from internal.service_ses.ses import Email
 
 
 def load_env_vars(vars_required: List[str]) -> Dict[str, str]:
@@ -63,23 +58,11 @@ def discovery(event, context):
     :return:
         None or Error
     """
-    vars_required = ["KUCOIN_URL_ALLTICKERS", "SANTIMENT_KEY", "TABLE_DISCOVERY", "SNS_TOPIC_DISCOVERY"]
-    vars_loaded = load_env_vars(vars_required)
-    santiment_init(vars_loaded["SANTIMENT_KEY"])
+    santiment_init(HC.santiment_key)
 
-    # Check for empty vars; return an error if exists
-    for var, val in vars_loaded.items():
-        # Handle empty env var
-        if val == "" or val is None:
-            return {
-                "statusCode": http.HTTPStatus.BAD_REQUEST,
-                "body": json.dumps({
-                    "message": f"Missing ENV Var: {var}  Value: {val}"
-                })
-            }
 
     # Handle bad response from Kucoin
-    response = requests.get(vars_loaded["KUCOIN_URL_ALLTICKERS"])
+    response = requests.get(HC.kucoin_url_alltickers)
     try:
         response.raise_for_status()
     except requests.HTTPError as e:
@@ -106,7 +89,7 @@ def discovery(event, context):
     # Update the Discovery table with non existent pairs
     new_slugs = list()
     for row in data.to_dict(orient="records"):
-        td = vars_loaded["TABLE_DISCOVERY"]
+        td = HC.table_discovery
         if not DYNAMO.key_exists(
                 td,
                 hash_key_name="slug", hash_key_value=row["slug"], hash_key_type="S"
@@ -123,7 +106,7 @@ def discovery(event, context):
         "Subject": f"Mastheader: Discovery Process Complete {current_utc_time}",
         "Message": f"Mastheader Discovery process complete. Discovered {len(new_slugs)} slugs.\n{new_slugs_formatted}",
     }
-    message_id = SNS.send_message(vars_loaded["SNS_TOPIC_DISCOVERY"], sns_message)
+    message_id = SNS.send_message(HC.sns_topic_discovery, sns_message)
 
     return {
         "statusCode": http.HTTPStatus.OK,
@@ -131,7 +114,7 @@ def discovery(event, context):
             "message": "Discovery complete successfully",
             "num_discovered": len(new_slugs),
             "slugs": ", ".join(new_slugs),
-            "sns_topic": vars_loaded["SNS_TOPIC_DISCOVERY"],
+            "sns_topic": HC.sns_topic_discovery,
             "sns_message_id": message_id
         })
     }
@@ -145,16 +128,13 @@ def notify(event, context):
     :param context:
     :return:
     """
-    vars_required = ["SES_SENDER", "SES_RECIPIENT"]
-    vars_loaded = load_env_vars(vars_required)
 
     for record in event["Records"]:
         email = Email(
-            sender=vars_loaded["SES_SENDER"],
-            recipient=vars_loaded["SES_RECIPIENT"],
+            sender=HC.ses_sender,
+            recipient=HC.ses_recipient,
             subject=record["Sns"]["Subject"],
             message=record["Sns"]["Message"]
         )
         message_id = SES.send_email(email)
         print("SES Message ID: ", message_id)
-

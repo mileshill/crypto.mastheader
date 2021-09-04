@@ -6,23 +6,10 @@ from collections import namedtuple
 
 import kucoin.exceptions
 
-from internal.config.config import HarvestConfig
-from internal.service_dynamo.dynamo import ServiceDynamo
-from internal.service_kucoin.account import Account
+from internal import HC, DYNAMO, ACCOUNT
 from internal.service_sqs.signal_strategy import SignalStrategy
 
-HC = HarvestConfig()
-DYNAMO = ServiceDynamo()
-
 Order = namedtuple("Order", ["order_id", "slug", "strategy_guid"])
-
-ACCOUNT = Account(
-    dynamo=DYNAMO, tablename=HC.table_account,
-    key=HC.kucoin_key, secret=HC.kucoin_secret, api_pass_phrase=HC.kucoin_api_passphrase,
-    max_trades=HC.strategy_max_trades,
-    name="TRADE"
-)
-ACCOUNT.init_account()
 
 
 def trade_buy(event, context):
@@ -31,7 +18,8 @@ def trade_buy(event, context):
     }
     # No reason to process further if the account cannot trade
     if not ACCOUNT.can_trade():
-        print(f"Account cannot trade. MaxPositions: {ACCOUNT.trades_max} OpenPositions: {ACCOUNT.trades_open} MaxTrade: {ACCOUNT.position_max} AvailBalance: {ACCOUNT.balance_avail}")
+        print(
+            f"Account cannot trade. MaxPositions: {ACCOUNT.trades_max} OpenPositions: {ACCOUNT.trades_open} MaxTrade: {ACCOUNT.position_max} AvailBalance: {ACCOUNT.balance_avail}")
         return
 
     # Delete those strategy signals where open positions already exist

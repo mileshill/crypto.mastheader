@@ -6,22 +6,10 @@ from collections import namedtuple
 
 import kucoin.exceptions
 
-from internal.config.config import HarvestConfig
-from internal.service_dynamo.dynamo import ServiceDynamo
-from internal.service_kucoin.account import Account
+from internal import HC, DYNAMO, ACCOUNT
 from internal.service_sqs.signal_strategy import SignalStrategy
 
-HC = HarvestConfig()
-DYNAMO = ServiceDynamo()
-
 Order = namedtuple("Order", ["order_id", "slug", "strategy_guid"])
-
-ACCOUNT = Account(
-    dynamo=DYNAMO, tablename=HC.table_account,
-    key=HC.kucoin_key, secret=HC.kucoin_secret, api_pass_phrase=HC.kucoin_api_passphrase,
-    max_trades=HC.strategy_max_trades,
-    name="TRADE"
-)
 
 
 def trade_sell(event, context):

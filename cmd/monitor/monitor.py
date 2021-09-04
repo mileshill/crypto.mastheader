@@ -13,12 +13,9 @@ from typing import Dict
 
 from kucoin.client import Client
 
-from internal.config.config import HarvestConfig
-from internal.service_dynamo.dynamo import ServiceDynamo
+from internal import HC
 from internal.service_sqs.sqs import ServiceSQS
 
-HC = HarvestConfig()
-DYNAMO = ServiceDynamo()
 SQSMonitor = ServiceSQS(HC.queue_monitor)
 
 
@@ -68,5 +65,3 @@ def monitor(event, context):
                 pass
 
         print(f"Done! No errors occurred for slug {msg.slug}")
-
-
