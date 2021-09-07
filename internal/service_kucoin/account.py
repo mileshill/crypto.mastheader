@@ -117,12 +117,12 @@ class Account:
                 return len(num_decimals) - 1
         return 4  # small enough for most all trading pairs (just in case)
 
-    def get_quote_increment_for_symbol(self, ticker_kucoin: str) -> int:
+    def get_base_increment_for_symbol(self, ticker_kucoin: str) -> int:
         for symbol in self.symbols:
             if symbol.symbol == ticker_kucoin:
-                increment = symbol.quoteIncrement
+                increment = symbol.baseIncrement
                 num_decimals = increment.split(".")[-1]
-                return len(num_decimals) - 1
+                return len(num_decimals)
         return 4
 
     def get_trade_accounts(self) -> List[KuCoinAcct]:
@@ -200,7 +200,7 @@ class Account:
         if any(symbol == acct.currency for acct in self.trade_accounts):
             return
         increment_price = self.get_price_increment_for_symbol(symbol)
-        increment_quote = self.get_quote_increment_for_symbol(symbol)
+        increment_quote = self.get_base_increment_for_symbol(symbol)
         print(
             f"Buy Order: {symbol} Price: {round(price, increment_price)} Size: {round(size, increment_quote)}")
         order_id = self.client.create_limit_order(
@@ -227,7 +227,7 @@ class Account:
             return
 
         increment_price = self.get_price_increment_for_symbol(symbol)
-        increment_quote = self.get_quote_increment_for_symbol(symbol)
+        increment_quote = self.get_base_increment_for_symbol(symbol)
         try:
             print(f"SELL Order: {symbol} Price: {str(price)} Quote: {price / size:.6f} Increment: {increment_price}")
         except ZeroDivisionError:
@@ -251,7 +251,7 @@ class Account:
         position_max_from_db = self.dynamo.account_get_max_position_size(
             self.tablename, self.name
         )
-        return min(position_max_from_db, self.balance_avail)
+        return int(min(position_max_from_db, self.balance_avail)) - 1
 
     def get_order(self, order_id: str) -> Dict:
         return self.client.get_order(order_id)
