@@ -111,12 +111,12 @@ custom:
   timeoutHarvest: 300
   timeoutStrategy: 120
   strategyDAAEnterLower: -0.06
-  strategyDAAEnterUpper: 0.13
-  strategyDAAExit: -0.47
-  strategySMALookback: 9
+  strategyDAAEnterUpper: 0.14
+  strategyDAAExit: -0.46
+  strategySMALookback: 10
   strategyMaxTrades: 6
-  strategyVolatilityEnter: 1.11
-  strategyVolatilityExit: 1.72
+  strategyVolatilityEnter: 1.05
+  strategyVolatilityExit: 1.73
   kucoinKey: ${env:KUCOIN_KEY}
   kucoinSecret: ${env:KUCOIN_SECRET}
   kucoinApiPassphrase: ${env:KUCOIN_API_PASSPHRASE}
