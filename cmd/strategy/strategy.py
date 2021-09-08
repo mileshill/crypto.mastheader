@@ -47,7 +47,9 @@ def compute_trade_conditions(df: pd.DataFrame) -> Dict:
     df["volatility_exit"] = df["delta"] > HC.strategy_volatility_exit
 
     # Active Addresses Change
-    df["daa_enter"] = df["active_addresses_24h_change_1d"] > HC.strategy_daa_enter
+    df["daa_enter_lower"] = df["active_addresses_24h_change_1d"] >= HC.strategy_daa_enter_lower
+    df["daa_enter_upper"] = df["active_addresses_24h_change_1d"] <= HC.strategy_daa_enter_upper
+    df["daa_enter"] = df["daa_enter_lower"] & df["daa_enter_upper"]
     df["daa_exit"] = df["active_addresses_24h_change_1d"] < HC.strategy_daa_exit
 
     # Trending

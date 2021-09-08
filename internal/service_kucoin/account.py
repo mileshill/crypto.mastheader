@@ -237,7 +237,8 @@ class Account:
             side=self.client.SIDE_SELL,
             price=f"{round(price, increment_price)}",
             size=f"{round(size, increment_quote)}",
-            time_in_force=self.client.TIMEINFORCE_GOOD_TILL_CANCELLED,
+            time_in_force=self.client.TIMEINFORCE_GOOD_TILL_TIME,
+            cancel_after=str(5400)  # Cancel after 1.5 hour
         )
         return order_id
 

@@ -34,6 +34,7 @@ provider:
     #TABLE_TRADE_DETAILS: ${self:custom.tableTradeDetails}
     TABLE_ACCOUNT: ${self:custom.tableAccount}
     TABLE_ACCOUNT_LOG: ${self:custom.tableAccountLog}
+    TABLE_ACCOUNT_POSITION_LOG: ${self:custom.tableAccountPositionLog}
     TABLE_ORDERS: ${self:custom.tableOrders}
     QUEUE_HARVEST: ${self:custom.queueHarvest}
     QUEUE_STRATEGY: ${self:custom.queueStrategy}
@@ -45,7 +46,8 @@ provider:
     SNS_TOPIC_STRATEGY: ${self:custom.snsTopicStrategy}
     SES_SENDER: ${self:custom.sesSender}
     SES_RECIPIENT: ${self:custom.sesRecipient}
-    STRATEGY_DAA_ENTER : ${self:custom.strategyDAAEnter}
+    STRATEGY_DAA_ENTER_LOWER : ${self:custom.strategyDAAEnterLower}
+    STRATEGY_DAA_ENTER_UPPER : ${self:custom.strategyDAAEnterUpper}
     STRATEGY_DAA_EXIT : ${self:custom.strategyDAAExit}
     STRATEGY_SMA_LOOKBACK : ${self:custom.strategySMALookback}
     STRATEGY_VOLATILITY_ENTER : ${self:custom.strategyVolatilityEnter}
@@ -93,6 +95,7 @@ custom:
   #tableTradeDetails: tradeDetails-${opt:stage, env:STAGE, "dev"}
   tableAccount: account-${opt:stage, env:STAGE, "dev"}
   tableAccountLog: accountLog-${opt:stage, env:STAGE, "dev"}
+  tableAccountPositionLog: accountPositionLog-${opt:stage, env:STAGE, "dev"}
   tableOrders: orders-${opt:stage, env:STAGE, "dev"}
   queueHarvest: harvest-${opt:stage, env:STAGE, "dev"}
   queueStrategy: strategy-${opt:stage, env:STAGE, "dev"}
@@ -107,12 +110,13 @@ custom:
   snsTopicHarvest: harvest-${opt:stage, env:STAGE, "dev"}
   timeoutHarvest: 300
   timeoutStrategy: 120
-  strategyDAAEnter: 0.25
+  strategyDAAEnterLower: -0.06
+  strategyDAAEnterUpper: 0.13
   strategyDAAExit: -0.47
-  strategySMALookback: 13
-  strategyMaxTrades: 9
-  strategyVolatilityEnter: 0.87
-  strategyVolatilityExit: 1.71
+  strategySMALookback: 9
+  strategyMaxTrades: 6
+  strategyVolatilityEnter: 1.11
+  strategyVolatilityExit: 1.72
   kucoinKey: ${env:KUCOIN_KEY}
   kucoinSecret: ${env:KUCOIN_SECRET}
   kucoinApiPassphrase: ${env:KUCOIN_API_PASSPHRASE}
@@ -247,8 +251,9 @@ functions:
           batchSize: 1
   accountLog:
     handler: cmd/account_log/account_log.account_log
+    timeout: 300
     events:
-      - schedule: cron(1 0/2 ? * * *) # Every 2nd hour plus 1 minute
+      - schedule: cron(0 0/1 ? * * *) # Every 2nd hour plus 1 minute
 resources:
   Resources:
     TableDiscovery:
@@ -365,6 +370,23 @@ resources:
             AttributeType: S
         KeySchema:
           - AttributeName: account_name
+            KeyType: HASH
+          - AttributeName: datetime
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+    TableAccountPositionLog:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.tableAccountPositionLog}
+        AttributeDefinitions:
+          - AttributeName: currency
+            AttributeType: S
+          - AttributeName: datetime
+            AttributeType: S
+        KeySchema:
+          - AttributeName: currency
             KeyType: HASH
           - AttributeName: datetime
             KeyType: RANGE

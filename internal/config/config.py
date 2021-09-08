@@ -15,6 +15,7 @@ class HarvestConfig:
         self.table_strategy_details = os.getenv("TABLE_STRATEGY_DETAILS", None)
         self.table_account = os.getenv("TABLE_ACCOUNT", None)
         self.table_account_log = os.getenv("TABLE_ACCOUNT_LOG", None)
+        self.table_account_position_log = os.getenv("TABLE_ACCOUNT_POSITION_LOG", None)
         # self.table_trade_meta = os.getenv("TABLE_TRADE_META", None)
         # self.table_trade_details = os.getenv("TABLE_TRADE_DETAILS", None)
         self.table_orders = os.getenv("TABLE_ORDERS", None)
@@ -37,7 +38,8 @@ class HarvestConfig:
         self.kucoin_api_passphrase = os.getenv("KUCOIN_API_PASSPHRASE", None)
 
         # Strategy Data
-        self.strategy_daa_enter = os.getenv("STRATEGY_DAA_ENTER", None)
+        self.strategy_daa_enter_lower = os.getenv("STRATEGY_DAA_ENTER_LOWER", None)
+        self.strategy_daa_enter_upper = os.getenv("STRATEGY_DAA_ENTER_UPPER", None)
         self.strategy_daa_exit = os.getenv("STRATEGY_DAA_EXIT", None)
         self.strategy_sma_lookback = os.getenv("STRATEGY_SMA_LOOKBACK", None)
         self.strategy_volatility_enter = os.getenv("STRATEGY_VOLATILITY_ENTER", None)

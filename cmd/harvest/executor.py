@@ -49,7 +49,7 @@ def executor(event, context):
         "price_usd", "marketcap_usd",
         "exchange_outflow_change_1d", "exchange_inflow_change_1d",
         "age_consumed",
-        "active_addresses_24h_change_1d"
+        "active_addresses_24h_change_1d", 'volume_usd_change_1d', 'volume_usd'
     ]
 
     for record in event["Records"]:
