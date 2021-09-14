@@ -34,6 +34,10 @@ def trade_sell(event, context):
         if kucoin_account.currency not in strategy_signals:  # kucoin_account.currency is the Base Ticker
             continue
 
+        if kucoin_account.currency == "KCS":
+            # Don't sell KCS. Used to reduce trading fees
+            continue
+
         # Open sell order to close the position
         if kucoin_account.holds == kucoin_account.balance:
             print(
