@@ -43,7 +43,9 @@ def compute_trade_conditions(df: pd.DataFrame) -> Dict:
 
     # Absolute difference between price and SMA
     df["delta"] = (df["price_usd"] - df["sma"]) / df["sma"]
-    df["volatility_enter"] = df["delta"] < HC.strategy_volatility_enter
+    df["volatility_enter_lower"] = df["delta"] < HC.strategy_volatility_enter_lower
+    df["volatility_enter_upper"] = df["delta"] < HC.strategy_volatility_enter_upper
+    df["volatility_enter"] = df["volatility_enter_lower"] & df["volatility_enter_upper"]
     df["volatility_exit"] = df["delta"] > HC.strategy_volatility_exit
 
     # Active Addresses Change

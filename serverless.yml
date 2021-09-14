@@ -50,7 +50,8 @@ provider:
     STRATEGY_DAA_ENTER_UPPER : ${self:custom.strategyDAAEnterUpper}
     STRATEGY_DAA_EXIT : ${self:custom.strategyDAAExit}
     STRATEGY_SMA_LOOKBACK : ${self:custom.strategySMALookback}
-    STRATEGY_VOLATILITY_ENTER : ${self:custom.strategyVolatilityEnter}
+    STRATEGY_VOLATILITY_ENTER_LOWER : ${self:custom.strategyVolatilityEnterLower}
+    STRATEGY_VOLATILITY_ENTER_UPPER : ${self:custom.strategyVolatilityEnterUpper}
     STRATEGY_VOLATILITY_EXIT : ${self:custom.strategyVolatilityExit}
     STRATEGY_MAX_TRADES: ${self:custom.strategyMaxTrades}
     KUCOIN_KEY : ${self:custom.kucoinKey}
@@ -110,13 +111,14 @@ custom:
   snsTopicHarvest: harvest-${opt:stage, env:STAGE, "dev"}
   timeoutHarvest: 300
   timeoutStrategy: 120
-  strategyDAAEnterLower: -0.06
-  strategyDAAEnterUpper: 0.14
+  strategyDAAEnterLower: -0.02
+  strategyDAAEnterUpper: 0.5
   strategyDAAExit: -0.46
-  strategySMALookback: 10
-  strategyMaxTrades: 6
-  strategyVolatilityEnter: 1.05
-  strategyVolatilityExit: 1.73
+  strategySMALookback: 2
+  strategyMaxTrades: 7
+  strategyVolatilityEnterLower: 0.099
+  strategyVolatilityEnterUpper: 1.25
+  strategyVolatilityExit: 1.7
   kucoinKey: ${env:KUCOIN_KEY}
   kucoinSecret: ${env:KUCOIN_SECRET}
   kucoinApiPassphrase: ${env:KUCOIN_API_PASSPHRASE}
@@ -190,7 +192,7 @@ functions:
   harvestPrimer:
     handler: cmd/harvest/primer.primer
     events:
-      - schedule: cron(1 0/2 ? * * *) # 01:00 UTC  (Midnight + 1 min) every day
+      - schedule: cron(0 0/2 ? * * *) # 01:00 UTC  (Midnight + 1 min) every day
   # Harvest Executor queries Santiment to get the latest metrics on each of the trading pairs
   harvestExecutor:
     handler: cmd/harvest/executor.executor

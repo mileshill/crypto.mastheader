@@ -71,9 +71,14 @@ def discovery(event, context):
     data = data.astype(str)
     data = data[data["marketSegment"] != "Stablecoin"]
 
+
+
     # Update the Discovery table with non existent pairs
+    bad_slugs = ["usd-coin", "susd", "tether"]
     new_slugs = list()
     for row in data.to_dict(orient="records"):
+        if row["slug"] in bad_slugs:
+            continue
         td = HC.table_discovery
         if not DYNAMO.key_exists(
                 td,

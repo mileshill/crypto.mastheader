@@ -36,7 +36,7 @@ def account_log(event, context):
 
     # Populate the table with all open trades, total values, and percentage of current account value
     try:
-        time.sleep(30) # allow the API a cooloff period after the initail calls
+        time.sleep(15) # allow the API a cooloff period after the initail calls
         df = pd.DataFrame(ACCOUNT.client.get_accounts())
         df = df[df["balance"].astype(float) > 0.0001]
         df["prices"] = df["currency"].apply(lambda x: ACCOUNT.client.get_fiat_prices(symbol=x).get(x))

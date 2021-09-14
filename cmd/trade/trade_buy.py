@@ -41,7 +41,7 @@ def trade_buy(event, context):
         # to ensure correct values
         if not ACCOUNT.can_trade():
             print(
-                f"Account cannot trade: NumOpenTrades: {ACCOUNT.trades_open} BalanceAvail: {ACCOUNT.balance_avail} Position Max: {ACCOUNT.position_max}")
+                f"Account cannot trade: NumOpenTrades: {ACCOUNT.trades_open} BalanceAvail: {ACCOUNT.balance_avail} Position Max: {ACCOUNT.position_max} SLUG: {signal.slug}")
             continue
 
         # Finally. Time to create a buy order
