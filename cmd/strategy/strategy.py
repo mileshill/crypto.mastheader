@@ -31,7 +31,7 @@ def get_sma_lookback_date(datetime_last_updated: str, lookback: int) -> str:
 
 def compute_trade_conditions(df: pd.DataFrame) -> Dict:
     # Simple moving average
-    df["sma"] = df["price_usd"].rolling(window=30).mean()
+    df["sma"] = df["price_btc"].rolling(window=30).mean()
 
     # SMA daily derivative
     df["sma_derivative"] = df["sma"].diff()

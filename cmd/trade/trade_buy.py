@@ -54,7 +54,7 @@ def trade_buy(event, context):
         try:
             print(f"Buy: {signal.ticker_kucoin} Price: {price} Size: {size}")
             order_id = ACCOUNT.create_limit_order_buy(
-                symbol=signal.ticker_kucoin,
+                symbol=f"{signal.ticker}-BTC",
                 price=price,
                 size=size
             )

@@ -34,22 +34,22 @@ def trade_sell(event, context):
         if kucoin_account.currency not in strategy_signals:  # kucoin_account.currency is the Base Ticker
             continue
 
-        if kucoin_account.currency == "KCS":
+        if kucoin_account.currency == "KCS" or kucoin_account.currency == "BTC":
             # Don't sell KCS. Used to reduce trading fees
             continue
 
         # Open sell order to close the position
         if kucoin_account.holds == kucoin_account.balance:
             print(
-                f"{kucoin_account.currency}-USDT has open order. Holds: {kucoin_account.holds} Balance: {kucoin_account.balance}")
+                f"{kucoin_account.currency}-BTC has open order. Holds: {kucoin_account.holds} Balance: {kucoin_account.balance}")
             continue
 
         # Create a new order to close the position
         try:
             print(
-                f"Sell: {kucoin_account.currency}-USDT Price:{kucoin_account.current_usdt} Size: {kucoin_account.balance}")
+                f"Sell: {kucoin_account.currency}-BTC Price:{kucoin_account.current_usdt} Size: {kucoin_account.balance}")
             order_id = ACCOUNT.create_limit_order_sell(
-                symbol=f"{kucoin_account.currency}-USDT",
+                symbol=f"{kucoin_account.currency}-BTC",
                 price=kucoin_account.current_usdt,
                 size=kucoin_account.balance
             )
@@ -62,7 +62,7 @@ def trade_sell(event, context):
             )
         except kucoin.exceptions.KucoinAPIException as e:
             if e.code == "900001":
-                print(f"{strategy_signals[kucoin_account.currency].slug}-USDT not exist")
+                print(f"{strategy_signals[kucoin_account.currency].slug}-BTC not exist")
                 print(e)
                 continue
             raise e

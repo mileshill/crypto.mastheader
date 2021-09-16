@@ -65,9 +65,9 @@ class Account:
         self.client = Client(self.key, self.secret, self.api_pass_phrase)
         self.symbols = [Symbol(**symbol) for symbol in self.client.get_symbols()]
         self.trade_accounts = self.get_trade_accounts()  # All non-zero trade accounts
-        self.trades_open = self.get_trades_open()  # All non-zero trade accounts NOT USDT
-        self.balance = self.get_trade_balance_total()  # All trade account balances converted to USDT
-        self.balance_avail = self.get_trade_balance_available()  # Available USDT
+        self.trades_open = self.get_trades_open()  # All non-zero trade accounts NOT BTC
+        self.balance = self.get_trade_balance_total()  # All trade account balances converted to BTC
+        self.balance_avail = self.get_trade_balance_available()  # Available BTC
         self.orders_open_sell = self.get_open_sell_orders()
 
         # Make any updates to dynamo
@@ -99,7 +99,7 @@ class Account:
     def can_trade(self) -> bool:
         """
         If trades_open < trades_max and there is balance_available True else False
-        Assume at least 1 USDT is available for trade.
+        Assume at least 1 BTC is available for trade.
         :return:
         bool
         """
@@ -133,8 +133,8 @@ class Account:
         """
         return [
             KuCoinAcct(**act) for act in self.client.get_accounts()
-            if ((float(act["balance"]) > 0.01) and (act["type"] == "trade"))  # Nonzero traiding pairs
-               or ((act["currency"] == "USDT") and (act["type"] == "trade"))  # Just USDT
+            if ((float(act["balance"]) > 0.00001) and (act["type"] == "trade"))  # Nonzero traiding pairs
+               or ((act["currency"] == "BTC") and (act["type"] == "trade"))  # Just BTC
         ]
 
     def get_trade_balance_total(self) -> float:
@@ -144,19 +144,16 @@ class Account:
         float
         """
         # Trade accounts with non-zero balance
-        return sum(
-            acct.get_usdt_equivalent(self.client) * acct.balance
-            for acct in self.trade_accounts
-        )
+        return sum(acct.balance for acct in self.trade_accounts)
 
     def get_trade_balance_available(self) -> Union[float, None]:
         """
-        Amount of USDT available to trade
+        Amount of BTC available to trade
         :return:
-        Amount of USDT or None
+        Amount of BTC or None
         """
         for acct in self.trade_accounts:
-            if acct.currency == "USDT":
+            if acct.currency == "BTC":
                 return acct.available
         return None
 
@@ -171,28 +168,31 @@ class Account:
 
     def get_trades_open(self):
         """
-        Any account where the curreny is not USDT
+        Any account where the curreny is not BTC
         :return:
         """
-        return sum(1 for acct in self.trade_accounts if acct.currency not in ["USDT", "KCS"])
+        return sum(1 for acct in self.trade_accounts if acct.currency not in ["BTC", "KCS"])
 
-    def compute_price_and_size(self, symbol: str, position_size: float) -> Tuple[float, float]:
+    def compute_price_and_size(self, symbol: str, position_size: float) -> Union[Tuple[float, float], Tuple[None, None]]:
         """
-        Trades are placed in the base currency. BTC-USDT: BTC is the base. USDT is the quote
-        To place a trade, the USDT position size must be converted to the corresponding amount in the
-        base pair.
+        Trades are placed in the base currency. BTC-BTC: BTC is the base. BTC is the quote
+        To place a trade, the BTC position size must be converted to the corresponding amount in the
+        base pair.jk
         :param symbol:
         :param position_size: number of dollars to spend
         :return:
         """
-        quote_usdt = float(self.client.get_fiat_prices(symbol=symbol)[symbol])
-        return quote_usdt, position_size / quote_usdt
+        val = self.client.get_ticker(symbol=f"{symbol}-BTC")
+        if not val:
+            return None, None
+        quote_btc = float(val["price"])
+        return quote_btc, position_size / quote_btc
 
     def create_limit_order_buy(self, symbol: str, price: float, size: float) -> Union[Dict[str, str], None]:
         """
         Creation of limit order to buy. Order is good for 1 hour
         :param size:  how many to buy
-        :param price:  price in USDT to place the order
+        :param price:  price in BTC to place the order
         :param symbol: trading pair
         :return:
         """
@@ -252,14 +252,14 @@ class Account:
         position_max_from_db = self.dynamo.account_get_max_position_size(
             self.tablename, self.name
         )
-        return int(min(position_max_from_db, self.balance_avail)) - 1
+        return int(min(position_max_from_db, self.balance_avail)) - 0.00001
 
     def get_order(self, order_id: str) -> Dict:
         return self.client.get_order(order_id)
 
     def has_active_buy_order_for_symbol(self, symbol: str) -> bool:
-        if "-USDT" not in symbol:
-            symbol = f"{symbol}-USDT"
+        if "-BTC" not in symbol:
+            symbol = f"{symbol}-BTC"
 
         items = self.client.get_orders(
             side=self.client.SIDE_BUY,
