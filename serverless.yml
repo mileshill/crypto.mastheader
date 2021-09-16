@@ -116,7 +116,7 @@ custom:
   strategyDAAExit: -0.46
   strategySMALookback: 1
   strategyMaxTrades: 5
-  strategyVolatilityEnterLower: 0.35
+  strategyVolatilityEnterLower: 0.099
   strategyVolatilityEnterUpper: 1.35
   strategyVolatilityExit: 2.7
   kucoinKey: ${env:KUCOIN_KEY}
