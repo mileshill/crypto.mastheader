@@ -268,9 +268,9 @@ class ServiceDynamo:
             AttributeUpdates={
                 "trades_max": {"Value": {"N": str(trades_max)}, "Action": "PUT"},
                 "trades_open": {"Value": {"N": str(trades_open)}, "Action": "PUT"},
-                "balance": {"Value": {"N": str(balance)}, "Action": "PUT"},
-                "balance_avail": {"Value": {"N": str(balance_avail)}, "Action": "PUT"},
-                "position_max": {"Value": {"N": str(position_max)}, "Action": "PUT"},
+                "balance": {"Value": {"N": str(format(balance, '.8f'))}, "Action": "PUT"},
+                "balance_avail": {"Value": {"N": str(format(balance_avail, '.8f'))}, "Action": "PUT"},
+                "position_max": {"Value": {"N": str(format(position_max, '.8f'))}, "Action": "PUT"},
                 "datetime_created": {"Value": {"S": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")},
                                      "Action": "PUT"},
                 "datetime_updated": {"Value": {"S": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")},
