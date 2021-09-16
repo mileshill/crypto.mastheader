@@ -42,7 +42,7 @@ def compute_trade_conditions(df: pd.DataFrame) -> Dict:
         .apply(lambda data: all(sample > 0 for sample in data))
 
     # Absolute difference between price and SMA
-    df["delta"] = (df["price_usd"] - df["sma"]) / df["sma"]
+    df["delta"] = (df["price_btc"] - df["sma"]) / df["sma"]
     df["volatility_enter_lower"] = df["delta"] < HC.strategy_volatility_enter_lower
     df["volatility_enter_upper"] = df["delta"] < HC.strategy_volatility_enter_upper
     df["volatility_enter"] = df["volatility_enter_lower"] & df["volatility_enter_upper"]
@@ -55,7 +55,7 @@ def compute_trade_conditions(df: pd.DataFrame) -> Dict:
     df["daa_exit"] = df["active_addresses_24h_change_1d"] < HC.strategy_daa_exit
 
     # Trending
-    df["trending"] = (df["sma_derivative_pos_trend"] == 1) & (df["price_usd"] > df["sma"])
+    df["trending"] = (df["sma_derivative_pos_trend"] == 1) & (df["price_btc"] > df["sma"])
 
     # Trade actions
     df["trade_open"] = df["daa_enter"] & df["trending"] & df["volatility_enter"]
