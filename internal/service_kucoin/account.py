@@ -75,10 +75,10 @@ class Account:
             self.tablename, account_name=self.name,
             trades_max=self.trades_max, trades_open=self.trades_open,
             balance=self.balance, balance_avail=self.balance_avail,
-            position_max=(self.balance / self.trades_max)
+            position_max=round((self.balance / self.trades_max), 6)
         )
 
-        self.position_max = int(self.balance / self.trades_max)
+        self.position_max = round(self.balance / self.trades_max, 6)
 
     def get_open_sell_orders(self) -> List[str]:
         return [
