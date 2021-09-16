@@ -46,10 +46,7 @@ def executor(event, context):
     """
     # Metrics to collect
     santiment_metrics = [
-        "price_usd", "marketcap_usd",
-        "exchange_outflow_change_1d", "exchange_inflow_change_1d",
-        "age_consumed",
-        "active_addresses_24h_change_1d", 'volume_usd_change_1d', 'volume_usd', "price_btc"
+        "price_usd", "active_addresses_24h_change_1d", "price_btc"
     ]
 
     for record in event["Records"]:
@@ -96,7 +93,7 @@ def executor(event, context):
 
         # Join the dataframes. If it is missing the two important metrics, it will be delete
         results = pd.concat(results, axis=1)
-        if "price_usd" not in results.columns or "active_addresses_24h_change_1d" not in results.columns:
+        if "price_btc" not in results.columns or "active_addresses_24h_change_1d" not in results.columns:
             print(f"Slug {slug} missing desire columns")
             print(f"Result after concat: \n{results}")
             print(f"Deleting {slug} from {HC.table_discovery}")
