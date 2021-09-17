@@ -111,12 +111,12 @@ custom:
   snsTopicHarvest: harvest-${opt:stage, env:STAGE, "dev"}
   timeoutHarvest: 300
   timeoutStrategy: 120
-  strategyDAAEnterLower: -0.12
-  strategyDAAEnterUpper: 0.5
-  strategyDAAExit: -0.46
-  strategySMALookback: 1
-  strategyMaxTrades: 6
-  strategyVolatilityEnterLower: 0.099
+  strategyDAAEnterLower: 0.08
+  strategyDAAEnterUpper: 0.48
+  strategyDAAExit: -0.48
+  strategySMALookback: 2
+  strategyMaxTrades: 5
+  strategyVolatilityEnterLower: -0.7
   strategyVolatilityEnterUpper: 1.35
   strategyVolatilityExit: 2.7
   kucoinKey: ${env:KUCOIN_KEY}
