@@ -115,7 +115,7 @@ custom:
   strategyDAAEnterUpper: 0.5
   strategyDAAExit: -0.46
   strategySMALookback: 1
-  strategyMaxTrades: 5
+  strategyMaxTrades: 6
   strategyVolatilityEnterLower: 0.099
   strategyVolatilityEnterUpper: 1.35
   strategyVolatilityExit: 2.7

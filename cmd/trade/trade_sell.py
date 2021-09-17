@@ -48,9 +48,11 @@ def trade_sell(event, context):
         try:
             print(
                 f"Sell: {kucoin_account.currency}-BTC Price:{kucoin_account.current_usdt} Size: {kucoin_account.balance}")
+            val = ACCOUNT.client.get_ticker(symbol=f"{kucoin_account.currency}-BTC")
+            price = float(val["price"])
             order_id = ACCOUNT.create_limit_order_sell(
                 symbol=f"{kucoin_account.currency}-BTC",
-                price=kucoin_account.current_usdt,
+                price=price,
                 size=kucoin_account.balance
             )
             orders.append(

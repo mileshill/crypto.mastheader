@@ -105,7 +105,7 @@ class Account:
         """
         if self.trades_open >= self.trades_max:
             return False
-        if self.balance_avail < self.position_max * 0.5:
+        if self.balance_avail < self.position_max * 0.1:
             return False
         return True
 
@@ -144,7 +144,7 @@ class Account:
         float
         """
         # Trade accounts with non-zero balance
-        return sum(acct.balance for acct in self.trade_accounts)
+        return [acct.balance for acct in self.trade_accounts if acct.currency == "BTC"][0]
 
     def get_trade_balance_available(self) -> Union[float, None]:
         """
@@ -252,7 +252,7 @@ class Account:
         position_max_from_db = self.dynamo.account_get_max_position_size(
             self.tablename, self.name
         )
-        return int(min(position_max_from_db, self.balance_avail)) - 0.00001
+        return min(position_max_from_db, self.balance_avail) - 0.00001
 
     def get_order(self, order_id: str) -> Dict:
         return self.client.get_order(order_id)

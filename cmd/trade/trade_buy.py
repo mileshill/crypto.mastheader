@@ -46,10 +46,15 @@ def trade_buy(event, context):
 
         # Finally. Time to create a buy order
         position_size = ACCOUNT.get_position_size_max()
+        print("Position Size: ", position_size)
         price, size = ACCOUNT.compute_price_and_size(
             symbol=signal.ticker,
             position_size=position_size
         )
+        if price is None or size is None:
+            print("No price or size. Dropping")
+            continue
+
         print(f"Avail: {ACCOUNT.balance_avail} PositionSize: {position_size} Price: {price} Size: {size}")
         try:
             print(f"Buy: {signal.ticker_kucoin} Price: {price} Size: {size}")
