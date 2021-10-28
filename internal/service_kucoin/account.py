@@ -112,7 +112,7 @@ class Account:
     def get_price_increment_for_symbol(self, ticker_kucoin: str) -> int:
         for symbol in self.symbols:
             if symbol.symbol == ticker_kucoin:
-                increment = symbol.priceIncrement  # String value "0.0001"
+                increment = symbol.baseIncrement  # String value "0.0001"
                 num_decimals = increment.split(".")[-1]
                 return len(num_decimals) - 1
         return 4  # small enough for most all trading pairs (just in case)
